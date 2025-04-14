@@ -1,16 +1,16 @@
-package presentation
+package middleware
 
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/labstack/echo/v4"
-	"github.com/nbd-wtf/go-nostr"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/labstack/echo/v4"
+	"github.com/nbd-wtf/go-nostr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,7 +23,8 @@ var tests = []struct {
 	{
 		name: "Missing Authorization header",
 		setupRequest: func() *http.Request {
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -32,8 +33,9 @@ var tests = []struct {
 	{
 		name: "Wrong prefix",
 		setupRequest: func() *http.Request {
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Bearer sometoken")
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -42,8 +44,9 @@ var tests = []struct {
 	{
 		name: "Invalid base64 event",
 		setupRequest: func() *http.Request {
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Nostr invalid-base64")
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -52,9 +55,10 @@ var tests = []struct {
 	{
 		name: "Invalid JSON",
 		setupRequest: func() *http.Request {
-			badJson := base64.StdEncoding.EncodeToString([]byte(`not a json`))
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
-			req.Header.Set("Authorization", "Nostr "+badJson)
+			badJSON := base64.StdEncoding.EncodeToString([]byte(`not a json`))
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+			req.Header.Set("Authorization", "Nostr "+badJSON)
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -69,10 +73,15 @@ var tests = []struct {
 				CreatedAt: nostr.Timestamp(time.Now().Unix() - 10),
 			}
 
-			eventBytes, _ := json.Marshal(invalidEvent)
+			eventBytes, err := json.Marshal(invalidEvent)
+			if err != nil {
+				panic(err)
+			}
+
 			encoded := base64.StdEncoding.EncodeToString(eventBytes)
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Nostr "+encoded)
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -82,8 +91,9 @@ var tests = []struct {
 		name: "Invalid kind",
 		setupRequest: func() *http.Request {
 			event := generateSignedEvent(9999, "upload", 600)
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Nostr "+event)
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -93,8 +103,9 @@ var tests = []struct {
 		name: "CreatedAt in the future",
 		setupRequest: func() *http.Request {
 			event := generateSignedEventWithCreatedAt(24242, "upload", 600, nostr.Timestamp(time.Now().Unix()+1000))
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Nostr "+event)
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -104,8 +115,9 @@ var tests = []struct {
 		name: "Missing expiration tag",
 		setupRequest: func() *http.Request {
 			event := generateSignedEventWithoutTags(24242)
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Nostr "+event)
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -115,8 +127,9 @@ var tests = []struct {
 		name: "Expiration expired",
 		setupRequest: func() *http.Request {
 			event := generateSignedEvent(24242, "upload", -10)
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Nostr "+event)
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -126,8 +139,9 @@ var tests = []struct {
 		name: "Wrong action",
 		setupRequest: func() *http.Request {
 			event := generateSignedEvent(24242, "download", 600)
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Nostr "+event)
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -137,8 +151,9 @@ var tests = []struct {
 		name: "Upload missing x tag",
 		setupRequest: func() *http.Request {
 			event := generateSignedEventWithoutX(24242, "upload", 600)
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Nostr "+event)
+
 			return req
 		},
 		expectedStatus:  http.StatusUnauthorized,
@@ -148,8 +163,9 @@ var tests = []struct {
 		name: "Success",
 		setupRequest: func() *http.Request {
 			event := generateSignedEvent(24242, "upload", 600)
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.Header.Set("Authorization", "Nostr "+event)
+
 			return req
 		},
 		expectedStatus:  http.StatusOK,
@@ -183,7 +199,6 @@ func TestAuthMiddleware(t *testing.T) {
 }
 
 func generateSignedEvent(kind int, action string, expirationOffset int64) string {
-
 	event := &nostr.Event{
 		Kind:      kind,
 		CreatedAt: nostr.Timestamp(time.Now().Unix() - 10),
@@ -195,13 +210,16 @@ func generateSignedEvent(kind int, action string, expirationOffset int64) string
 		Content: "",
 	}
 
-	event.Sign(SecretKey)
-	eventBytes, _ := json.Marshal(event)
+	_ = event.Sign(SecretKey)
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		panic(err)
+	}
+
 	return base64.StdEncoding.EncodeToString(eventBytes)
 }
 
 func generateSignedEventWithCreatedAt(kind int, action string, expirationOffset int64, timestamp nostr.Timestamp) string {
-
 	event := &nostr.Event{
 		Kind:      kind,
 		CreatedAt: timestamp,
@@ -213,8 +231,12 @@ func generateSignedEventWithCreatedAt(kind int, action string, expirationOffset 
 		Content: "",
 	}
 
-	event.Sign(SecretKey)
-	eventBytes, _ := json.Marshal(event)
+	_ = event.Sign(SecretKey)
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		panic(err)
+	}
+
 	return base64.StdEncoding.EncodeToString(eventBytes)
 }
 
@@ -225,9 +247,13 @@ func generateSignedEventWithoutTags(kind int) string {
 		Tags:      nostr.Tags{},
 		Content:   "",
 	}
-	event.Sign(SecretKey)
+	_ = event.Sign(SecretKey)
 
-	eventBytes, _ := json.Marshal(event)
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		panic(err)
+	}
+
 	return base64.StdEncoding.EncodeToString(eventBytes)
 }
 
@@ -242,7 +268,11 @@ func generateSignedEventWithoutX(kind int, action string, expirationOffset int64
 		Content: "",
 	}
 
-	event.Sign(SecretKey)
-	eventBytes, _ := json.Marshal(event)
+	_ = event.Sign(SecretKey)
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		panic(err)
+	}
+
 	return base64.StdEncoding.EncodeToString(eventBytes)
 }
