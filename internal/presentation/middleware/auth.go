@@ -104,7 +104,7 @@ func validateEvent(event *nostr.Event, action string) error {
 	if event.Kind != 24242 {
 		return fmt.Errorf("invalid kind")
 	}
-	if event.CreatedAt.Time().Unix() >= time.Now().Unix() {
+	if event.CreatedAt.Time().Unix() > time.Now().Add(1*time.Minute).Unix() {
 		return fmt.Errorf("invalid created_at")
 	}
 
@@ -135,10 +135,9 @@ func validateEvent(event *nostr.Event, action string) error {
 }
 
 func getTagValue(event *nostr.Event, tagName string) string {
-	for _, tag := range event.Tags {
-		if len(tag) == 2 && tag[0] == tagName {
-			return tag[1]
-		}
+	tag := event.Tags.Find(tagName)
+	if len(tag) > 1 {
+		return tag[1]
 	}
 
 	return ""
