@@ -29,25 +29,34 @@ func NewUploader(minioClient *minio.Client, timeout int) *Uploader {
 	}
 }
 
+type UploadFileResult struct {
+	Size int64  `json:"size"`
+	Type string `json:"type"`
+}
+
 // UploadFile uploads a file to MinIO after validating the file's size, type, and hash.
 // It checks the file against declared attributes and uploads it to the appropriate bucket.
-func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize int64, hash, fileType string) error {
+func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize int64, hash, fileType string) (
+	UploadFileResult, error,
+) {
 	data, err := io.ReadAll(body)
 	defer body.Close()
 	if err != nil {
-		return fmt.Errorf("failed to read file: %w", err)
+		return UploadFileResult{}, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	if !u.validateFileSize(data, fileSize) {
-		return errors.New("invalid file size")
+	isValid, actualSize := u.validateFileSize(data, fileSize)
+	if !isValid {
+		return UploadFileResult{}, errors.New("invalid file size")
 	}
 
-	if !u.validateFileType(data, fileType) {
-		return errors.New("invalid file type")
+	isValid, actualType := u.validateFileType(data, fileType)
+	if !isValid {
+		return UploadFileResult{}, errors.New("invalid file type")
 	}
 
 	if !u.validateHash(data, hash) {
-		return errors.New("file hash does not match")
+		return UploadFileResult{}, errors.New("file hash does not match")
 	}
 
 	bucket := u.getBucketForType(fileType)
@@ -57,22 +66,30 @@ func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(u.timeout)*time.Millisecond)
 	defer cancel()
 
-	_, err = u.minioClient.PutObject(ctx, bucket, hash, reader, fileSize, minio.PutObjectOptions{ContentType: fileType})
+	uploadInfo, err := u.minioClient.PutObject(ctx, bucket, hash, reader, actualSize,
+		minio.PutObjectOptions{ContentType: actualType})
 	if err != nil {
-		return fmt.Errorf("minio put object error: %w", err)
+		return UploadFileResult{}, fmt.Errorf("minio put object error: %w", err)
 	}
 
-	return nil
+	return UploadFileResult{
+		Size: uploadInfo.Size,
+		Type: actualType,
+	}, nil
 }
 
-func (u *Uploader) validateFileSize(data []byte, declaredSize int64) bool {
-	return declaredSize == -1 || int64(len(data)) == declaredSize
+func (u *Uploader) validateFileSize(data []byte, declaredSize int64) (bool, int64) {
+	actualSize := int64(len(data))
+	validation := declaredSize == -1 || declaredSize == actualSize
+
+	return validation, actualSize
 }
 
-func (u *Uploader) validateFileType(data []byte, expectedType string) bool {
-	detected := mimetype.Detect(data)
+func (u *Uploader) validateFileType(data []byte, expectedType string) (bool, string) {
+	detected := mimetype.Detect(data).String()
+	validation := expectedType == detected || expectedType == ""
 
-	return expectedType == detected.String() || expectedType == ""
+	return validation, detected
 }
 
 func (u *Uploader) validateHash(data []byte, expectedHash string) bool {

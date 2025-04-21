@@ -11,6 +11,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
@@ -103,14 +104,18 @@ func TestUploadFile(t *testing.T) {
 		fileHash         string
 		expectError      bool
 		expectedErrorMsg string
+		expectedSize     int64
+		expectedType     string
 	}{
 		{
-			name:        "successful upload",
-			content:     testFileContent,
-			fileSize:    testFileSize,
-			fileType:    testMimeType,
-			fileHash:    testFileHash,
-			expectError: false,
+			name:         "successful upload",
+			content:      testFileContent,
+			fileSize:     testFileSize,
+			fileType:     testMimeType,
+			fileHash:     testFileHash,
+			expectError:  false,
+			expectedSize: testFileSize,
+			expectedType: testMimeType,
 		},
 		{
 			name:             "hash mismatch",
@@ -140,21 +145,25 @@ func TestUploadFile(t *testing.T) {
 			expectedErrorMsg: "invalid file size",
 		},
 		{
-			name:        "file size ignored (-1)",
-			content:     testFileContent,
-			fileSize:    -1,
-			fileType:    testMimeType,
-			fileHash:    testFileHash,
-			expectError: false,
+			name:         "file size ignored (-1)",
+			content:      testFileContent,
+			fileSize:     -1,
+			fileType:     testMimeType,
+			fileHash:     testFileHash,
+			expectError:  false,
+			expectedSize: testFileSize,
+			expectedType: testMimeType,
 		},
 
 		{
-			name:        "file type ignored (empty)",
-			content:     testFileContent,
-			fileSize:    -1,
-			fileType:    testMimeType,
-			fileHash:    testFileHash,
-			expectError: false,
+			name:         "file type ignored (empty)",
+			content:      testFileContent,
+			fileSize:     -1,
+			fileType:     testMimeType,
+			fileHash:     testFileHash,
+			expectError:  false,
+			expectedSize: testFileSize,
+			expectedType: testMimeType,
 		},
 	}
 
@@ -163,7 +172,7 @@ func TestUploadFile(t *testing.T) {
 			t.Parallel()
 
 			body := io.NopCloser(bytes.NewReader(tc.content))
-			err := uploader.UploadFile(context.Background(), body, tc.fileSize, tc.fileHash, tc.fileType)
+			info, err := uploader.UploadFile(context.Background(), body, tc.fileSize, tc.fileHash, tc.fileType)
 
 			if tc.expectError {
 				if err == nil {
@@ -173,6 +182,9 @@ func TestUploadFile(t *testing.T) {
 				}
 			} else if err != nil {
 				t.Errorf("unexpected error: %v", err)
+			} else {
+				assert.Equal(t, info.Size, tc.expectedSize)
+				assert.Equal(t, info.Type, tc.expectedType)
 			}
 		})
 	}
