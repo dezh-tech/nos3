@@ -3,8 +3,6 @@ package minio
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -55,10 +53,6 @@ func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize 
 		return UploadFileResult{}, errors.New("invalid file type")
 	}
 
-	if !u.validateHash(data, hash) {
-		return UploadFileResult{}, errors.New("file hash does not match")
-	}
-
 	bucket := u.getBucketForType(fileType)
 
 	reader := io.NopCloser(bytes.NewReader(data))
@@ -90,12 +84,6 @@ func (u *Uploader) validateFileType(data []byte, expectedType string) (bool, str
 	validation := expectedType == detected || expectedType == ""
 
 	return validation, detected
-}
-
-func (u *Uploader) validateHash(data []byte, expectedHash string) bool {
-	hash := sha256.Sum256(data)
-
-	return hex.EncodeToString(hash[:]) == expectedHash
 }
 
 func (u *Uploader) getBucketForType(fileType string) string {

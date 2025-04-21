@@ -118,15 +118,6 @@ func TestUploadFile(t *testing.T) {
 			expectedType: testMimeType,
 		},
 		{
-			name:             "hash mismatch",
-			content:          testFileContent,
-			fileSize:         testFileSize,
-			fileType:         testMimeType,
-			fileHash:         "deadbeef",
-			expectError:      true,
-			expectedErrorMsg: "file hash does not match",
-		},
-		{
 			name:             "wrong file type",
 			content:          testFileContent,
 			fileSize:         testFileSize,
