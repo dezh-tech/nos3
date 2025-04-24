@@ -1,0 +1,16 @@
+# This is default nos3 config file.
+# This config file contains essential information which is needed for bootstrapping.
+
+# developers note: for development, set environment to `"dev"` and make a config.yml and .env beside your build.
+
+# environment determines where and how to read secrets. (dev/prod)
+# default is prod.
+environment: "prod"
+
+# Configuration settings for the MinIO client.
+minio:
+  # timeout_in_ms defines the maximum duration (in milliseconds) for requests to the MinIO API.
+  timeout_in_ms: 5000
+
+  # bucket specifies the default bucket name where files will be uploaded.
+  bucket: "myapp-temp-uploads"
