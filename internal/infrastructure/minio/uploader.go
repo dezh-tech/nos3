@@ -3,27 +3,28 @@ package minio
 import (
 	"bytes"
 	"context"
-	"errors"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"strings"
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 )
 
-// Uploader is responsible for handling file uploads to MinIO.
 type Uploader struct {
 	minioClient *minio.Client
-	timeout     int
+	cfg         *Config
 }
 
-// NewUploader creates a new Uploader instance.
-func NewUploader(minioClient *minio.Client, timeout int) *Uploader {
+func NewUploader(minioClient *minio.Client, config *Config) *Uploader {
 	return &Uploader{
 		minioClient: minioClient,
-		timeout:     timeout,
+		cfg:         config,
 	}
 }
 
@@ -32,71 +33,135 @@ type UploadFileResult struct {
 	Type string `json:"type"`
 }
 
-// UploadFile uploads a file to MinIO after validating the file's size, type, and hash.
-// It checks the file against declared attributes and uploads it to the appropriate bucket.
-func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize int64, hash, fileType string) (
-	UploadFileResult, error,
-) {
-	data, err := io.ReadAll(body)
+func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize int64, expectedHash,
+	expectedType string,
+) (UploadFileResult, error) {
 	defer body.Close()
-	if err != nil {
-		return UploadFileResult{}, fmt.Errorf("failed to read file: %w", err)
-	}
 
-	isValid, actualSize := u.validateFileSize(data, fileSize)
-	if !isValid {
-		return UploadFileResult{}, errors.New("invalid file size")
-	}
-
-	isValid, actualType := u.validateFileType(data, fileType)
-	if !isValid {
-		return UploadFileResult{}, errors.New("invalid file type")
-	}
-
-	bucket := u.getBucketForType(fileType)
-
-	reader := io.NopCloser(bytes.NewReader(data))
-
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(u.timeout)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(u.cfg.Timeout)*time.Millisecond)
 	defer cancel()
 
-	uploadInfo, err := u.minioClient.PutObject(ctx, bucket, hash, reader, actualSize,
-		minio.PutObjectOptions{ContentType: actualType})
+	bucketName := u.cfg.Bucket
+	var chunkNames []string
+	hasher := sha256.New()
+
+	detectedMIME, totalBytes, err := u.processFileChunks(ctx, body, bucketName, &chunkNames, hasher, expectedType)
 	if err != nil {
-		return UploadFileResult{}, fmt.Errorf("minio put object error: %w", err)
+		u.cleanupChunks(ctx, bucketName, chunkNames)
+
+		return UploadFileResult{}, err
 	}
 
+	if err := u.validateFileSize(totalBytes, fileSize); err != nil {
+		u.cleanupChunks(ctx, bucketName, chunkNames)
+
+		return UploadFileResult{}, err
+	}
+
+	calculatedHash := hex.EncodeToString(hasher.Sum(nil))
+	if err := u.validateFileHash(calculatedHash, expectedHash); err != nil {
+		u.cleanupChunks(ctx, bucketName, chunkNames)
+
+		return UploadFileResult{}, err
+	}
+
+	finalName := calculatedHash
+	if err := u.composeChunks(ctx, bucketName, chunkNames, finalName); err != nil {
+		u.cleanupChunks(ctx, bucketName, chunkNames)
+
+		return UploadFileResult{}, err
+	}
+
+	u.cleanupChunks(ctx, bucketName, chunkNames)
+
 	return UploadFileResult{
-		Size: uploadInfo.Size,
-		Type: actualType,
+		Size: totalBytes,
+		Type: detectedMIME,
 	}, nil
 }
 
-func (u *Uploader) validateFileSize(data []byte, declaredSize int64) (bool, int64) {
-	actualSize := int64(len(data))
-	validation := declaredSize == -1 || declaredSize == actualSize
+func (u *Uploader) processFileChunks(ctx context.Context, body io.ReadCloser, bucketName string, chunkNames *[]string,
+	hasher hash.Hash, expectedType string,
+) (string, int64, error) {
+	var detectedMIME string
+	var totalBytes int64
+	buf := make([]byte, 5*1024*1024)
+	chunkIndex := 0
 
-	return validation, actualSize
+	for {
+		n, err := body.Read(buf)
+		if n > 0 {
+			chunk := buf[:n]
+			_, _ = hasher.Write(chunk)
+
+			if chunkIndex == 0 {
+				detectedMIME = mimetype.Detect(chunk).String()
+				if !strings.Contains(detectedMIME, expectedType) {
+					return "", 0, fmt.Errorf("invalid file type: detected %s, expected %s", detectedMIME, expectedType)
+				}
+			}
+
+			chunkName := fmt.Sprintf("chunk-%s-%d", uuid.New().String(), chunkIndex)
+			*chunkNames = append(*chunkNames, chunkName)
+
+			_, err := u.minioClient.PutObject(ctx, bucketName, chunkName, bytes.NewReader(chunk), int64(len(chunk)),
+				minio.PutObjectOptions{
+					ContentType: detectedMIME,
+				})
+			if err != nil {
+				return "", 0, fmt.Errorf("chunk upload failed: %w", err)
+			}
+
+			totalBytes += int64(len(chunk))
+			chunkIndex++
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", 0, fmt.Errorf("read error: %w", err)
+		}
+	}
+
+	return detectedMIME, totalBytes, nil
 }
 
-func (u *Uploader) validateFileType(data []byte, expectedType string) (bool, string) {
-	detected := mimetype.Detect(data).String()
-	validation := expectedType == detected || expectedType == ""
+func (u *Uploader) composeChunks(ctx context.Context, bucketName string, chunkNames []string, finalName string) error {
+	sources := make([]minio.CopySrcOptions, len(chunkNames))
+	for i, name := range chunkNames {
+		sources[i] = minio.CopySrcOptions{Bucket: bucketName, Object: name}
+	}
 
-	return validation, detected
+	dst := minio.CopyDestOptions{Bucket: bucketName, Object: finalName}
+	_, err := u.minioClient.ComposeObject(ctx, dst, sources...)
+	if err != nil {
+		return fmt.Errorf("compose error: %w", err)
+	}
+
+	return nil
 }
 
-func (u *Uploader) getBucketForType(fileType string) string {
-	switch {
-	case strings.HasPrefix(fileType, "image/"):
-		return "images"
-	case strings.HasPrefix(fileType, "video/"):
-		return "videos"
-	case strings.HasPrefix(fileType, "audio/"):
-		return "audios"
-	case fileType == "application/pdf":
-		return "documents"
-	default:
-		return "other"
+func (u *Uploader) validateFileSize(totalBytes, expectedSize int64) error {
+	if totalBytes != expectedSize {
+		return fmt.Errorf("file size mismatch: read %d bytes, expected %d", totalBytes, expectedSize)
+	}
+
+	return nil
+}
+
+func (u *Uploader) validateFileHash(calculatedHash, expectedHash string) error {
+	if calculatedHash != expectedHash {
+		return fmt.Errorf("invalid hash: got %s, expected %s", calculatedHash, expectedHash)
+	}
+
+	return nil
+}
+
+func (u *Uploader) cleanupChunks(ctx context.Context, bucketName string, chunkNames []string) {
+	for _, name := range chunkNames {
+		err := u.minioClient.RemoveObject(ctx, bucketName, name, minio.RemoveObjectOptions{})
+		if err != nil {
+			continue
+		}
 	}
 }
