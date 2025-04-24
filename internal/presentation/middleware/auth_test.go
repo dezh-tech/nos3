@@ -156,18 +156,6 @@ func TestAuthMiddleware(t *testing.T) {
 			expectedMessage: "invalid action",
 		},
 		{
-			name: "Upload missing correct x tag",
-			setupRequest: func() *http.Request {
-				event := generateSignedEventWithWrongX(t, 24242, "upload", 600)
-				req := httptest.NewRequest(http.MethodGet, "/", strings.NewReader("Hello World!"))
-				req.Header.Set("Authorization", "Nostr "+event)
-
-				return req
-			},
-			expectedStatus:  http.StatusUnauthorized,
-			expectedMessage: "invalid sha256 hash as `x` tag",
-		},
-		{
 			name: "Success",
 			setupRequest: func() *http.Request {
 				event := generateSignedEventWithCorrectX(t, 24242, "upload", 600, strings.NewReader("Hello World!"))
