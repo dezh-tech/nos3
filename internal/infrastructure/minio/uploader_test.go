@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -19,26 +20,11 @@ import (
 const (
 	TestAccessKey = "minioadmin"
 	TestSecretKey = "minioadmin"
-)
-
-var (
-	testFileContent = []byte{
-		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-		0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-	} // "image/png"
-
-	testFileSize = int64(len(testFileContent))
-	testFileHash = func() string {
-		h := sha256.Sum256(testFileContent)
-
-		return hex.EncodeToString(h[:])
-	}()
-	testMimeType = "image/png"
+	BucketName    = "temp-bucket-for-tests"
 )
 
 func setupMinio(t *testing.T) (testcontainers.Container, *minio.Client) {
 	t.Helper()
-
 	ctx := context.Background()
 
 	req := testcontainers.ContainerRequest{
@@ -66,116 +52,157 @@ func setupMinio(t *testing.T) (testcontainers.Container, *minio.Client) {
 	}
 
 	client, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(TestAccessKey, TestSecretKey, ""),
-		Secure: false,
+		Creds:           credentials.NewStaticV4(TestAccessKey, TestSecretKey, ""),
+		Secure:          false,
+		TrailingHeaders: true,
 	})
 	if err != nil {
 		t.Fatal("Failed to create minio client:", err)
 	}
 
-	for _, bucket := range []string{"images", "videos", "audios", "documents", "other"} {
-		err = client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{})
-		if err != nil {
-			t.Fatal("Failed to create bucket:", err)
-		}
+	err = client.MakeBucket(ctx, BucketName, minio.MakeBucketOptions{})
+	if err != nil {
+		t.Fatal("Failed to create bucket:", err)
 	}
 
 	return container, client
 }
 
-func TestUploadFile(t *testing.T) {
-	t.Parallel()
+type uploadIntegrationTestCase struct {
+	name             string
+	content          []byte
+	fileSize         int64
+	fileHash         string
+	fileType         string
+	expectError      bool
+	expectedErrorMsg string
+	expectedSize     int64
+	expectedType     string
+	expectFinalName  bool
+	simulateCorrupt  bool
+}
 
+type corruptReader struct {
+	source []byte
+	failAt int
+	read   int
+}
+
+func (r *corruptReader) Read(p []byte) (int, error) {
+	if r.read >= r.failAt {
+		return 0, errors.New("simulated read error")
+	}
+	n := copy(p, r.source[r.read:])
+	r.read += n
+
+	return n, nil
+}
+
+func TestUploadFile(t *testing.T) {
 	container, client := setupMinio(t)
 	t.Cleanup(func() {
-		err := container.Terminate(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
+		_ = container.Terminate(context.Background())
 	})
 
-	uploader := NewUploader(client, 3000)
+	uploader := NewUploader(client, &Config{
+		Timeout: 3000,
+		Bucket:  BucketName,
+	})
 
-	tests := []struct {
-		name             string
-		content          []byte
-		fileSize         int64
-		fileType         string
-		fileHash         string
-		expectError      bool
-		expectedErrorMsg string
-		expectedSize     int64
-		expectedType     string
-	}{
+	smallFile := []byte("hello, world!")
+	smallHash := sha256.Sum256(smallFile)
+	largeFile := bytes.Repeat([]byte("x"), 1024*1024*17) // 17MB
+	largeHash := sha256.Sum256(largeFile)
+
+	tests := []uploadIntegrationTestCase{
 		{
-			name:         "successful upload",
-			content:      testFileContent,
-			fileSize:     testFileSize,
-			fileType:     testMimeType,
-			fileHash:     testFileHash,
-			expectError:  false,
-			expectedSize: testFileSize,
-			expectedType: testMimeType,
+			name:            "small valid file",
+			content:         smallFile,
+			fileSize:        int64(len(smallFile)),
+			fileHash:        hex.EncodeToString(smallHash[:]),
+			fileType:        "text/plain",
+			expectError:     false,
+			expectedSize:    int64(len(smallFile)),
+			expectedType:    "text/plain",
+			expectFinalName: true,
 		},
 		{
-			name:             "wrong file type",
-			content:          testFileContent,
-			fileSize:         testFileSize,
-			fileType:         "application/json",
-			fileHash:         testFileHash,
+			name:            "large file multiple chunks",
+			content:         largeFile,
+			fileSize:        int64(len(largeFile)),
+			fileHash:        hex.EncodeToString(largeHash[:]),
+			fileType:        "text/plain",
+			expectError:     false,
+			expectedSize:    int64(len(largeFile)),
+			expectedType:    "text/plain",
+			expectFinalName: true,
+		},
+		{
+			name:             "mime type mismatch",
+			content:          smallFile,
+			fileSize:         int64(len(smallFile)),
+			fileHash:         hex.EncodeToString(smallHash[:]),
+			fileType:         "image/png",
 			expectError:      true,
 			expectedErrorMsg: "invalid file type",
 		},
 		{
-			name:             "wrong file size",
-			content:          testFileContent,
-			fileSize:         testFileSize + 1,
-			fileType:         testMimeType,
-			fileHash:         testFileHash,
+			name:             "hash mismatch",
+			content:          smallFile,
+			fileSize:         int64(len(smallFile)),
+			fileHash:         strings.Repeat("0", 64),
+			fileType:         "text/plain",
 			expectError:      true,
-			expectedErrorMsg: "invalid file size",
+			expectedErrorMsg: "invalid hash",
 		},
 		{
-			name:         "file size ignored (-1)",
-			content:      testFileContent,
-			fileSize:     -1,
-			fileType:     testMimeType,
-			fileHash:     testFileHash,
-			expectError:  false,
-			expectedSize: testFileSize,
-			expectedType: testMimeType,
+			name:             "file size mismatch",
+			content:          smallFile,
+			fileSize:         int64(len(smallFile)) + 5,
+			fileHash:         hex.EncodeToString(smallHash[:]),
+			fileType:         "text/plain",
+			expectError:      true,
+			expectedErrorMsg: "file size mismatch",
 		},
-
 		{
-			name:         "file type ignored (empty)",
-			content:      testFileContent,
-			fileSize:     -1,
-			fileType:     testMimeType,
-			fileHash:     testFileHash,
-			expectError:  false,
-			expectedSize: testFileSize,
-			expectedType: testMimeType,
+			name:             "simulate corrupted stream",
+			content:          smallFile,
+			fileSize:         int64(len(smallFile)),
+			fileHash:         hex.EncodeToString(smallHash[:]),
+			fileType:         "text/plain",
+			simulateCorrupt:  true,
+			expectError:      true,
+			expectedErrorMsg: "simulated read error",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+			var reader io.ReadCloser
+			if tc.simulateCorrupt {
+				reader = io.NopCloser(&corruptReader{
+					source: tc.content,
+					failAt: 5,
+				})
+			} else {
+				reader = io.NopCloser(bytes.NewReader(tc.content))
+			}
 
-			body := io.NopCloser(bytes.NewReader(tc.content))
-			info, err := uploader.UploadFile(context.Background(), body, tc.fileSize, tc.fileHash, tc.fileType)
+			result, err := uploader.UploadFile(context.Background(), reader, tc.fileSize, tc.fileHash, tc.fileType)
 
 			if tc.expectError {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				} else if tc.expectedErrorMsg != "" && !strings.Contains(err.Error(), tc.expectedErrorMsg) {
-					t.Errorf("error mismatch: expected to contain %q, got %q", tc.expectedErrorMsg, err.Error())
+				assert.Error(t, err)
+				if tc.expectedErrorMsg != "" {
+					assert.Contains(t, err.Error(), tc.expectedErrorMsg)
 				}
-			} else if err != nil {
-				t.Errorf("unexpected error: %v", err)
 			} else {
-				assert.Equal(t, info.Size, tc.expectedSize)
-				assert.Equal(t, info.Type, tc.expectedType)
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedSize, result.Size)
+				assert.Contains(t, result.Type, tc.expectedType)
+				if tc.expectFinalName {
+					_, err := client.StatObject(context.Background(), BucketName, tc.fileHash, minio.StatObjectOptions{})
+					assert.NoError(t, err, "expected object %s to exist in MinIO", tc.fileHash)
+				}
 			}
 		})
 	}
