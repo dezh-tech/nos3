@@ -17,8 +17,10 @@ create_bucket() {
 }
 
 # Create buckets
-create_bucket images
-create_bucket videos
-create_bucket documents
-create_bucket audios
-create_bucket other
+create_bucket myapp-public-uploads
+create_bucket myapp-temp-uploads
+
+mc anonymous set public myminio/nos3-public-uploads  # Make bucket publicly readable
+mc anonymous set none myminio/nos3-temp-uploads      # Make bucket private
+
+mc ilm rule add myminio/nos3-temp-uploads --expiry-days 7
