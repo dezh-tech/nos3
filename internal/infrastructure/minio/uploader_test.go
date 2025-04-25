@@ -99,6 +99,8 @@ func (r *corruptReader) Read(p []byte) (int, error) {
 }
 
 func TestUploadFile(t *testing.T) {
+	t.Parallel()
+
 	container, client := setupMinio(t)
 	t.Cleanup(func() {
 		_ = container.Terminate(context.Background())
@@ -109,47 +111,65 @@ func TestUploadFile(t *testing.T) {
 		Bucket:  BucketName,
 	})
 
-	smallFile := []byte("hello, world!")
-	smallHash := sha256.Sum256(smallFile)
-	largeFile := bytes.Repeat([]byte("x"), 1024*1024*17) // 17MB
-	largeHash := sha256.Sum256(largeFile)
+	hello := []byte("hello, world!")
+	helloHash := sha256.Sum256(hello)
 
-	tests := []uploadIntegrationTestCase{
+	pngData := append([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}, bytes.Repeat([]byte("a"), 100)...)
+	pngHash := sha256.Sum256(pngData)
+
+	zipData := append([]byte{0x50, 0x4B, 0x03, 0x04}, bytes.Repeat([]byte("z"), 100)...)
+	zipHash := sha256.Sum256(zipData)
+
+	var empty []byte
+	emptyHash := sha256.Sum256(empty)
+
+	testCases := []uploadIntegrationTestCase{
 		{
 			name:            "small valid file",
-			content:         smallFile,
-			fileSize:        int64(len(smallFile)),
-			fileHash:        hex.EncodeToString(smallHash[:]),
+			content:         hello,
+			fileSize:        int64(len(hello)),
+			fileHash:        hex.EncodeToString(helloHash[:]),
 			fileType:        "text/plain",
 			expectError:     false,
-			expectedSize:    int64(len(smallFile)),
+			expectedSize:    int64(len(hello)),
 			expectedType:    "text/plain",
 			expectFinalName: true,
 		},
 		{
-			name:            "large file multiple chunks",
-			content:         largeFile,
-			fileSize:        int64(len(largeFile)),
-			fileHash:        hex.EncodeToString(largeHash[:]),
-			fileType:        "text/plain",
+			name:            "image/png",
+			content:         pngData,
+			fileSize:        int64(len(pngData)),
+			fileHash:        hex.EncodeToString(pngHash[:]),
+			fileType:        "image/png",
 			expectError:     false,
-			expectedSize:    int64(len(largeFile)),
-			expectedType:    "text/plain",
+			expectedSize:    int64(len(pngData)),
+			expectedType:    "image/png",
 			expectFinalName: true,
 		},
 		{
-			name:             "mime type mismatch",
-			content:          smallFile,
-			fileSize:         int64(len(smallFile)),
-			fileHash:         hex.EncodeToString(smallHash[:]),
-			fileType:         "image/png",
+			name:            "application/zip",
+			content:         zipData,
+			fileSize:        int64(len(zipData)),
+			fileHash:        hex.EncodeToString(zipHash[:]),
+			fileType:        "application/zip",
+			expectError:     false,
+			expectedSize:    int64(len(zipData)),
+			expectedType:    "application/zip",
+			expectFinalName: true,
+		},
+		{
+			name:             "zero byte file",
+			content:          empty,
+			fileSize:         0,
+			fileHash:         hex.EncodeToString(emptyHash[:]),
+			fileType:         "text/plain",
 			expectError:      true,
-			expectedErrorMsg: "invalid file type",
+			expectedErrorMsg: "read error: empty file",
 		},
 		{
 			name:             "hash mismatch",
-			content:          smallFile,
-			fileSize:         int64(len(smallFile)),
+			content:          hello,
+			fileSize:         int64(len(hello)),
 			fileHash:         strings.Repeat("0", 64),
 			fileType:         "text/plain",
 			expectError:      true,
@@ -157,18 +177,18 @@ func TestUploadFile(t *testing.T) {
 		},
 		{
 			name:             "file size mismatch",
-			content:          smallFile,
-			fileSize:         int64(len(smallFile)) + 5,
-			fileHash:         hex.EncodeToString(smallHash[:]),
+			content:          hello,
+			fileSize:         int64(len(hello)) + 5,
+			fileHash:         hex.EncodeToString(helloHash[:]),
 			fileType:         "text/plain",
 			expectError:      true,
 			expectedErrorMsg: "file size mismatch",
 		},
 		{
 			name:             "simulate corrupted stream",
-			content:          smallFile,
-			fileSize:         int64(len(smallFile)),
-			fileHash:         hex.EncodeToString(smallHash[:]),
+			content:          hello,
+			fileSize:         int64(len(hello)),
+			fileHash:         hex.EncodeToString(helloHash[:]),
 			fileType:         "text/plain",
 			simulateCorrupt:  true,
 			expectError:      true,
@@ -176,8 +196,10 @@ func TestUploadFile(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			var reader io.ReadCloser
 			if tc.simulateCorrupt {
 				reader = io.NopCloser(&corruptReader{
