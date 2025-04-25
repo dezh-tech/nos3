@@ -280,25 +280,3 @@ func generateSignedEventWithoutTags(t *testing.T, kind int) string {
 
 	return base64.StdEncoding.EncodeToString(eventBytes)
 }
-
-func generateSignedEventWithWrongX(t *testing.T, kind int, action string, expirationOffset int64) string {
-	t.Helper()
-	event := &nostr.Event{
-		Kind:      kind,
-		CreatedAt: nostr.Timestamp(time.Now().Unix() - 10),
-		Tags: nostr.Tags{
-			{"expiration", strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
-			{"t", action},
-			{"x", "wrong_hash"},
-		},
-		Content: "",
-	}
-
-	_ = event.Sign(SecretKey)
-	eventBytes, err := json.Marshal(event)
-	if err != nil {
-		panic(err)
-	}
-
-	return base64.StdEncoding.EncodeToString(eventBytes)
-}
