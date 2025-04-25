@@ -31,7 +31,6 @@ func authMiddleware(action string) echo.MiddlewareFunc {
 			}
 
 			ctx.Set("pk", event.PubKey)
-			ctx.Set("x", getTagValue(event, "x"))
 			ctx.Set("t", getTagValue(event, "t"))
 			ctx.Set("expiration", getExpirationTime(event))
 
