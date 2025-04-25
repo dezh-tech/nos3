@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -50,6 +51,10 @@ func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize 
 		u.cleanupChunks(ctx, bucketName, chunkNames)
 
 		return UploadFileResult{}, err
+	}
+
+	if len(chunkNames) == 0 {
+		return UploadFileResult{}, errors.New("read error: empty file")
 	}
 
 	if err := u.validateFileSize(totalBytes, fileSize); err != nil {
@@ -142,7 +147,7 @@ func (u *Uploader) composeChunks(ctx context.Context, bucketName string, chunkNa
 }
 
 func (u *Uploader) validateFileSize(totalBytes, expectedSize int64) error {
-	if totalBytes != expectedSize {
+	if totalBytes != expectedSize && expectedSize != -1 {
 		return fmt.Errorf("file size mismatch: read %d bytes, expected %d", totalBytes, expectedSize)
 	}
 
