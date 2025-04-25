@@ -11,8 +11,9 @@ import (
 
 // Config represents the configs used by services on system.
 type Config struct {
-	Environment string       `yaml:"environment"`
-	MinIO       minio.Config `yaml:"minio"`
+	Environment   string               `yaml:"environment"`
+	MinIOClient   minio.ClientConfig   `yaml:"minio_client"`
+	MinIOUploader minio.UploaderConfig `yaml:"minio_uploader"`
 }
 
 func Load(path string) (*Config, error) {
@@ -41,6 +42,9 @@ func Load(path string) (*Config, error) {
 			}
 		}
 	}
+
+	config.MinIOClient.AccessKey = os.Getenv("MINIO_ROOT_USER")
+	config.MinIOClient.SecretKey = os.Getenv("MINIO_ROOT_PASSWORD")
 
 	if err = config.basicCheck(); err != nil {
 		return nil, Error{

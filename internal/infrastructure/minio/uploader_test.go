@@ -106,7 +106,7 @@ func TestUploadFile(t *testing.T) {
 		_ = container.Terminate(context.Background())
 	})
 
-	uploader := NewUploader(client, &Config{
+	uploader := NewUploader(client, &UploaderConfig{
 		Timeout: 3000,
 		Bucket:  BucketName,
 	})

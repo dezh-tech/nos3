@@ -7,8 +7,12 @@
 # default is prod.
 environment: "prod"
 
-# Configuration settings for the MinIO client.
-minio:
+# Configuration settings for the MinIO instance.
+minio_client:
+  endpoint: "localhost:9000"
+
+# Configuration settings for the MinIO uploader.
+minio_uploader:
   # timeout_in_ms defines the maximum duration (in milliseconds) for requests to the MinIO API.
   timeout_in_ms: 5000
 

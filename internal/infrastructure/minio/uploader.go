@@ -19,10 +19,10 @@ import (
 
 type Uploader struct {
 	minioClient *minio.Client
-	cfg         *Config
+	cfg         *UploaderConfig
 }
 
-func NewUploader(minioClient *minio.Client, config *Config) *Uploader {
+func NewUploader(minioClient *minio.Client, config *UploaderConfig) *Uploader {
 	return &Uploader{
 		minioClient: minioClient,
 		cfg:         config,
