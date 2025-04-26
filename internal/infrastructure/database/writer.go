@@ -14,7 +14,7 @@ func NewMediaWriter(db *Database) *MediaWriter {
 	return &MediaWriter{db: db}
 }
 
-func (u *MediaWriter) Upload(ctx context.Context, media *model.Media) error {
+func (u *MediaWriter) Write(ctx context.Context, media *model.Media) error {
 	ctx, cancel := context.WithTimeout(ctx, u.db.QueryTimeout)
 	defer cancel()
 
