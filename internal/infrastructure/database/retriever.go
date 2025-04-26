@@ -3,9 +3,9 @@ package database
 import (
 	"context"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	"nos3/internal/domain/model"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type MediaRetriever struct {
