@@ -82,7 +82,7 @@ func initMediaCollection(db *Database) error {
 				"upload_time":   bson.M{"bsonType": "date"},
 				"author": bson.M{
 					"bsonType":  "string",
-					"minLength": 4,
+					"minLength": 63,
 					"maxLength": 63,
 					"pattern":   "^npub",
 				},
