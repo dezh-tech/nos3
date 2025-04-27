@@ -17,3 +17,17 @@ services:
       - ./init-buckets.sh:/init-buckets.sh
     entrypoint: /bin/sh -c "minio server --console-address ':9090' /data & sleep 10 && /init-buckets.sh && wait"
 
+  mongo:
+    container_name: go-mongo
+    image: mongo:latest
+    ports:
+      - published: 27017
+        target: 27017
+    environment:
+      DATABASE_URI: ${DATABASE_URI}
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

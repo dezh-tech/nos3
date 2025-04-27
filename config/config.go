@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 
+	"nos3/internal/infrastructure/database"
+
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 
@@ -14,6 +16,7 @@ type Config struct {
 	Environment   string               `yaml:"environment"`
 	MinIOClient   minio.ClientConfig   `yaml:"minio_client"`
 	MinIOUploader minio.UploaderConfig `yaml:"minio_uploader"`
+	DBConfig      database.Config      `yaml:"db_config"`
 }
 
 func Load(path string) (*Config, error) {
@@ -45,6 +48,7 @@ func Load(path string) (*Config, error) {
 
 	config.MinIOClient.AccessKey = os.Getenv("MINIO_ROOT_USER")
 	config.MinIOClient.SecretKey = os.Getenv("MINIO_ROOT_PASSWORD")
+	config.DBConfig.URI = os.Getenv("DATABASE_URI")
 
 	if err = config.basicCheck(); err != nil {
 		return nil, Error{

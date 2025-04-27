@@ -7,14 +7,26 @@
 # default is prod.
 environment: "prod"
 
-# Configuration settings for the MinIO instance.
+# minio_client specifies settings for the MinIO instance.
 minio_client:
   endpoint: "localhost:9000"
 
-# Configuration settings for the MinIO uploader.
+# minio_uploader specifies settings for the MinIO uploader.
 minio_uploader:
   # timeout_in_ms defines the maximum duration (in milliseconds) for requests to the MinIO API.
   timeout_in_ms: 5000
 
   # bucket specifies the default bucket name where files will be uploaded.
   bucket: "myapp-temp-uploads"
+
+# db_config specifies settings for database
+db_config:
+
+  # db_name defines the name
+  db_name: "nos3_db"
+
+  # connection_timeout_in_ms defines the timeout for connecting to the database
+  connection_timeout_in_ms: 30000
+
+  # query_timeout_in_ms defines the timeout for querying to the database
+  query_timeout_in_ms: 5000
