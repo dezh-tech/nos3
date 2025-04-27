@@ -1,12 +1,9 @@
 package middleware
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -33,42 +30,13 @@ func authMiddleware(action string) echo.MiddlewareFunc {
 				return ctx.String(http.StatusUnauthorized, err.Error())
 			}
 
-			if err := validateRequestBody(event, action, ctx.Request().Body); err != nil {
-				return ctx.String(http.StatusUnauthorized, err.Error())
-			}
-
 			ctx.Set("pk", event.PubKey)
-			ctx.Set("x", getTagValue(event, "x"))
 			ctx.Set("t", getTagValue(event, "t"))
 			ctx.Set("expiration", getExpirationTime(event))
 
 			return next(ctx)
 		}
 	}
-}
-
-func validateRequestBody(event *nostr.Event, action string, body io.ReadCloser) error {
-	defer body.Close()
-	if action == "upload" {
-		bodyContent, err := io.ReadAll(body)
-		if err != nil {
-			return fmt.Errorf("could not read request body: %w", err)
-		}
-
-		hash := sha256.New()
-		hash.Write(bodyContent)
-		hashedData := hash.Sum(nil)
-		hexHash := hex.EncodeToString(hashedData)
-		x := getTagValue(event, "x")
-
-		if hexHash != x {
-			return fmt.Errorf("invalid sha256 hash as `x` tag")
-		}
-
-		return nil
-	}
-
-	return nil
 }
 
 func validateAuthHeader(authHeader string) error {
