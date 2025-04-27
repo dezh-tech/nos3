@@ -20,7 +20,6 @@ linters:
     - exhaustive
     - copyloopvar
     - forbidigo
-    - gci
     - ginkgolinter
     - gocheckcompilerdirectives
     - gocognit
@@ -28,7 +27,6 @@ linters:
     - gocyclo
     - godot
     - gofmt
-    - gofumpt
     - goheader
     - goimports
     - gomoddirectives

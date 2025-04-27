@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
 	"nos3/internal/domain/model"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestRetrieve(t *testing.T) {
