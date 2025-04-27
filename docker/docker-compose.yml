@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  minio:
+    container_name: go-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    image: minio/minio:latest
+    ports:
+      - published: 9000
+        target: 9000
+      - published: 9090
+        target: 9090
+    restart: always
+    volumes:
+      - ./init-buckets.sh:/init-buckets.sh
+    entrypoint: /bin/sh -c "minio server --console-address ':9090' /data & sleep 10 && /init-buckets.sh && wait"
+
