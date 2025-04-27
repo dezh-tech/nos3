@@ -81,43 +81,43 @@ func TestWrite(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	writer := NewMediaWriter(db)
+	writer := NewBlobWriter(db)
 
-	baseMedia := &model.Media{
+	baseBlob := &model.Blob{
 		ID:           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		MinIOAddress: "minio://bucket/key",
 		UploadTime:   time.Now(),
 		Author:       "npub11111111111111111111111111111111111111111111111111111111111",
-		MediaType:    "image/png",
+		BlobType:     "image/png",
 	}
 
 	tests := []struct {
 		name        string
-		modify      func(m *model.Media)
+		modify      func(m *model.Blob)
 		expectError string
 	}{
 		{
-			name:        "valid media",
-			modify:      func(_ *model.Media) {},
+			name:        "valid blob",
+			modify:      func(_ *model.Blob) {},
 			expectError: "",
 		},
 		{
 			name: "missing required author",
-			modify: func(m *model.Media) {
+			modify: func(m *model.Blob) {
 				m.Author = ""
 			},
 			expectError: "Document failed validation",
 		},
 		{
 			name: "invalid _id length",
-			modify: func(m *model.Media) {
+			modify: func(m *model.Blob) {
 				m.ID = "short"
 			},
 			expectError: "Document failed validation",
 		},
 		{
 			name: "invalid author pattern",
-			modify: func(m *model.Media) {
+			modify: func(m *model.Blob) {
 				m.Author = "user123"
 			},
 			expectError: "Document failed validation",
@@ -128,10 +128,10 @@ func TestWrite(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			copyMedia := *baseMedia
-			tt.modify(&copyMedia)
+			copyBlob := *baseBlob
+			tt.modify(&copyBlob)
 
-			err := writer.Write(context.Background(), &copyMedia)
+			err := writer.Write(context.Background(), &copyBlob)
 
 			if tt.expectError == "" {
 				require.NoError(t, err)

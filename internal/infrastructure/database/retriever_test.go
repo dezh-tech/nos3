@@ -21,27 +21,27 @@ func TestRetrieve(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	retriever := NewMediaRetriever(db)
+	retriever := NewBlobRetriever(db)
 
 	ctx := context.Background()
-	coll := db.Client.Database(TestDBName).Collection(MediaCollection)
+	coll := db.Client.Database(TestDBName).Collection(BlobCollection)
 
 	expectedID := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
-	expectedMedia := &model.Media{
+	expectedBlob := &model.Blob{
 		ID:           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		MinIOAddress: "minio://bucket/key",
 		UploadTime:   time.Now(),
 		Author:       "npub11111111111111111111111111111111111111111111111111111111111",
-		MediaType:    "image/png",
+		BlobType:     "image/png",
 	}
 
-	_, err = coll.InsertOne(ctx, expectedMedia)
+	_, err = coll.InsertOne(ctx, expectedBlob)
 	require.NoError(t, err)
 
 	got, err := retriever.GetByID(ctx, expectedID)
 	require.NoError(t, err)
 	require.NotNil(t, got)
-	require.Equal(t, expectedMedia.ID, got.ID)
-	require.Equal(t, expectedMedia.MinIOAddress, got.MinIOAddress)
+	require.Equal(t, expectedBlob.ID, got.ID)
+	require.Equal(t, expectedBlob.MinIOAddress, got.MinIOAddress)
 }

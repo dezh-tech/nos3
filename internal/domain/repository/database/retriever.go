@@ -7,5 +7,5 @@ import (
 )
 
 type Retriever interface {
-	GetByID(ctx context.Context, id string) (*model.Media, error)
+	GetByID(ctx context.Context, id string) (*model.Blob, error)
 }

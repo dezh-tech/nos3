@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const MediaCollection = "media"
+const BlobCollection = "blob"
 
 type Database struct {
 	DBName       string
@@ -48,18 +48,18 @@ func Connect(cfg Config) (*Database, error) {
 		QueryTimeout: time.Duration(cfg.QueryTimeout) * time.Millisecond,
 	}
 
-	if err := initMediaCollection(db); err != nil {
+	if err := initBlobCollection(db); err != nil {
 		return nil, err
 	}
 
 	return db, nil
 }
 
-func initMediaCollection(db *Database) error {
+func initBlobCollection(db *Database) error {
 	ctx, cancel := context.WithTimeout(context.Background(), db.QueryTimeout)
 	defer cancel()
 
-	collections, err := db.Client.Database(db.DBName).ListCollectionNames(ctx, bson.M{"name": MediaCollection})
+	collections, err := db.Client.Database(db.DBName).ListCollectionNames(ctx, bson.M{"name": BlobCollection})
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func initMediaCollection(db *Database) error {
 	collOpts := options.CreateCollection().SetValidator(bson.M{
 		"$jsonSchema": bson.M{
 			"bsonType": "object",
-			"required": []string{"_id", "minio_address", "upload_time", "author", "media_type"},
+			"required": []string{"_id", "minio_address", "upload_time", "author", "blob_type"},
 			"properties": bson.M{
 				"_id": bson.M{
 					"bsonType":    "string",
@@ -86,8 +86,8 @@ func initMediaCollection(db *Database) error {
 					"maxLength": 63,
 					"pattern":   "^npub",
 				},
-				"media_type": bson.M{"bsonType": "string"},
-				"duration":   bson.M{"bsonType": []string{"int", "null"}},
+				"blob_type": bson.M{"bsonType": "string"},
+				"duration":  bson.M{"bsonType": []string{"int", "null"}},
 				"dimensions": bson.M{
 					"bsonType": []string{"object", "null"},
 					"properties": bson.M{
@@ -112,11 +112,11 @@ func initMediaCollection(db *Database) error {
 		},
 	})
 
-	err = db.Client.Database(db.DBName).CreateCollection(ctx, MediaCollection, collOpts)
+	err = db.Client.Database(db.DBName).CreateCollection(ctx, BlobCollection, collOpts)
 	if err != nil {
 		return err
 	}
-	coll := db.Client.Database(db.DBName).Collection(MediaCollection)
+	coll := db.Client.Database(db.DBName).Collection(BlobCollection)
 	_, err = coll.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{Key: "author", Value: 1}},
 	})

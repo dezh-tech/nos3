@@ -6,21 +6,21 @@ import (
 	"nos3/internal/domain/model"
 )
 
-type MediaWriter struct {
+type BlobWriter struct {
 	db *Database
 }
 
-func NewMediaWriter(db *Database) *MediaWriter {
-	return &MediaWriter{db: db}
+func NewBlobWriter(db *Database) *BlobWriter {
+	return &BlobWriter{db: db}
 }
 
-func (u *MediaWriter) Write(ctx context.Context, media *model.Media) error {
+func (u *BlobWriter) Write(ctx context.Context, blob *model.Blob) error {
 	ctx, cancel := context.WithTimeout(ctx, u.db.QueryTimeout)
 	defer cancel()
 
-	coll := u.db.Client.Database(u.db.DBName).Collection(MediaCollection)
+	coll := u.db.Client.Database(u.db.DBName).Collection(BlobCollection)
 
-	_, err := coll.InsertOne(ctx, media)
+	_, err := coll.InsertOne(ctx, blob)
 
 	return err
 }

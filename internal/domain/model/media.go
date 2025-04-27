@@ -2,12 +2,12 @@ package model
 
 import "time"
 
-type Media struct {
+type Blob struct {
 	ID           string      `bson:"_id"`
 	MinIOAddress string      `bson:"minio_address"`
 	UploadTime   time.Time   `bson:"upload_time"`
 	Author       string      `bson:"author"`
-	MediaType    string      `bson:"media_type"`
+	BlobType     string      `bson:"blob_type"`
 	Duration     *int        `bson:"duration"`   // Pointer to allow null for non-audio/video
 	Dimensions   *Dimensions `bson:"dimensions"` // Pointer to allow null
 	Size         int64       `bson:"size"`

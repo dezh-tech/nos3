@@ -7,5 +7,5 @@ import (
 )
 
 type Writer interface {
-	Write(ctx context.Context, media *model.Media) error
+	Write(ctx context.Context, blob *model.Blob) error
 }
