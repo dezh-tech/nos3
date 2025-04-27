@@ -33,7 +33,7 @@ func TestRetrieve(t *testing.T) {
 		ID:           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		MinIOAddress: "minio://bucket/key",
 		UploadTime:   time.Now(),
-		Author:       "npub11111111111111111111111111111111111111111111111111111111111",
+		Author:       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		BlobType:     "image/png",
 	}
 
