@@ -81,10 +81,8 @@ func initBlobCollection(db *Database) error {
 				"minio_address": bson.M{"bsonType": "string"},
 				"upload_time":   bson.M{"bsonType": "date"},
 				"author": bson.M{
-					"bsonType":  "string",
-					"minLength": 63,
-					"maxLength": 63,
-					"pattern":   "^npub",
+					"bsonType": "string",
+					"pattern":  "^[a-fA-F0-9]{64}$",
 				},
 				"blob_type": bson.M{"bsonType": "string"},
 				"duration":  bson.M{"bsonType": []string{"int", "null"}},
