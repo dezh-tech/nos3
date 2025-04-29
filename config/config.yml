@@ -30,3 +30,18 @@ db_config:
 
   # query_timeout_in_ms defines the timeout for querying to the database
   query_timeout_in_ms: 5000
+
+
+# broker_config specifies settings for broker
+broker_config:
+
+  # queue_name defines the name
+  queue_name: "blobs"
+
+  # broker_config specifies settings for broker
+
+# publisher_config specifies settings for message queue publisher
+publisher_config:
+
+  # timeout_in_ms defines the publishing timeout
+  timeout_in_ms: 5000
