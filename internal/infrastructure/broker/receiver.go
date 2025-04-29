@@ -3,6 +3,7 @@ package broker
 import (
 	"context"
 	"errors"
+
 	"nos3/internal/domain/repository/broker"
 )
 
@@ -21,7 +22,6 @@ func NewReceiver(rabbitMQ *Client) *Receiver {
 // message consumption will stop and resources must be cleaned up properly.
 // NOTE: AutoAck is disabled. Caller must manually call Ack/Nack on each message after processing.
 func (r *Receiver) Messages(ctx context.Context) (<-chan broker.Message, error) {
-
 	if r.rabbitMQ.channel == nil {
 		return nil, errors.New("channel is not initialized")
 	}
@@ -35,7 +35,6 @@ func (r *Receiver) Messages(ctx context.Context) (<-chan broker.Message, error) 
 		false,
 		nil,
 	)
-
 	if err != nil {
 		return nil, err
 	}
@@ -58,5 +57,6 @@ func (r *Receiver) Messages(ctx context.Context) (<-chan broker.Message, error) 
 			}
 		}
 	}()
+
 	return out, nil
 }

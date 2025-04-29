@@ -19,6 +19,7 @@ func NewClient(cfg Config) (*Client, error) {
 	ch, err := conn.Channel()
 	if err != nil {
 		conn.Close()
+
 		return nil, err
 	}
 
@@ -33,10 +34,11 @@ func NewClient(cfg Config) (*Client, error) {
 	if err != nil {
 		ch.Close()
 		conn.Close()
+
 		return nil, err
 	}
 
-	err = ch.Qos(
+	_ = ch.Qos(
 		1,
 		0,
 		false,

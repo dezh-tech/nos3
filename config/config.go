@@ -1,8 +1,9 @@
 package config
 
 import (
-	"nos3/internal/infrastructure/broker"
 	"os"
+
+	"nos3/internal/infrastructure/broker"
 
 	"nos3/internal/infrastructure/database"
 

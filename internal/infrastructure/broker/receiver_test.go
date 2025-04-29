@@ -3,13 +3,14 @@ package broker
 import (
 	"context"
 	"errors"
-	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/stretchr/testify/assert"
 )
 
-func publishForTest(t *testing.T, ctx context.Context, message string, client *Client, timeout time.Duration) error {
+func publishForTest(ctx context.Context, t *testing.T, message string, client *Client, timeout time.Duration) error {
 	t.Helper()
 	if client.channel == nil {
 		return errors.New("channel is not initialized")
@@ -42,10 +43,10 @@ func TestMessages(t *testing.T) {
 		URI:       uri,
 		QueueName: RabbitQueue,
 	})
-	defer client.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer client.Close()
 
 	receiver := NewReceiver(client)
 
@@ -53,7 +54,7 @@ func TestMessages(t *testing.T) {
 
 	for _, msg := range msgs {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		err := publishForTest(t, ctx, msg, client, time.Duration(5000)*time.Millisecond)
+		err := publishForTest(ctx, t, msg, client, time.Duration(5000)*time.Millisecond)
 		cancel()
 		assert.NoError(t, err)
 	}

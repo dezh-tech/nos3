@@ -3,12 +3,13 @@ package broker
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
@@ -102,11 +103,10 @@ func TestPublish(t *testing.T) {
 				QueueName: RabbitQueue,
 			})
 
-			defer client.Close()
-
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer client.Close()
 
 			publisher := NewPublisher(client, PublisherConfig{Timeout: 2000})
 

@@ -3,8 +3,9 @@ package broker
 import (
 	"context"
 	"errors"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"time"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Publisher struct {
