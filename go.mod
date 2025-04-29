@@ -9,8 +9,10 @@ require (
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/minio/minio-go/v7 v7.0.90
 	github.com/nbd-wtf/go-nostr v0.51.10
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.37.0
+	github.com/testcontainers/testcontainers-go/modules/rabbitmq v0.37.0
 	go.mongodb.org/mongo-driver v1.17.3
 	gopkg.in/yaml.v3 v3.0.1
 )
