@@ -50,7 +50,8 @@ func setupRabbitMQ(t *testing.T) string {
 	req := testcontainers.ContainerRequest{
 		Image:        "rabbitmq:3.7.25-management-alpine",
 		ExposedPorts: []string{"5672/tcp"},
-		WaitingFor:   wait.ForListeningPort("5672/tcp").WithStartupTimeout(30 * time.Second),
+		WaitingFor: wait.ForLog("Server startup complete").
+			WithStartupTimeout(30 * time.Second),
 		Env: map[string]string{
 			"RABBITMQ_DEFAULT_USER": RabbitUser,
 			"RABBITMQ_DEFAULT_PASS": RabbitPass,
