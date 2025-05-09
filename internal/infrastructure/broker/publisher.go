@@ -27,6 +27,9 @@ func (p *Publisher) Publish(ctx context.Context, message string) error {
 		return errors.New("redis not initialized")
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, p.timout)
+	defer cancel()
+
 	return p.redis.XAdd(ctx, &redis.XAddArgs{
 		Stream: p.stream,
 		Values: map[string]interface{}{"body": message},
