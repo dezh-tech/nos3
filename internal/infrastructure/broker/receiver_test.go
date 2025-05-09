@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/stretchr/testify/assert"
 )
 
-func publishMessages(t *testing.T, ctx context.Context, client *Client, messages []string) error {
+func publishMessages(t *testing.T, client *Client, messages []string) error {
 	t.Helper()
 
 	if client.redis == nil {
@@ -20,7 +21,7 @@ func publishMessages(t *testing.T, ctx context.Context, client *Client, messages
 	}
 
 	for _, msg := range messages {
-		err := client.redis.XAdd(ctx, &redis.XAddArgs{
+		err := client.redis.XAdd(context.Background(), &redis.XAddArgs{
 			Stream: client.stream,
 			Values: map[string]interface{}{"body": msg},
 		}).Err()
@@ -45,7 +46,6 @@ func TestMessages_SingleAndMultipleMessages(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			uri, terminate := setupRedis(t)
@@ -59,7 +59,7 @@ func TestMessages_SingleAndMultipleMessages(t *testing.T) {
 			assert.NoError(t, err)
 			defer client.Close()
 
-			err = publishMessages(t, context.Background(), client, tt.payloads)
+			err = publishMessages(t, client, tt.payloads)
 			assert.NoError(t, err)
 
 			receiver := NewReceiver(client)
@@ -101,7 +101,7 @@ func TestMessages_ConcurrentConsumers(t *testing.T) {
 		messages[i] = fmt.Sprintf("msg-%d", i)
 	}
 
-	err = publishMessages(t, context.Background(), client, messages)
+	err = publishMessages(t, client, messages)
 	assert.NoError(t, err)
 
 	received := make(chan string, totalMessages)

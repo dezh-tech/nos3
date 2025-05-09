@@ -3,6 +3,7 @@ package broker
 import (
 	"context"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -19,7 +20,7 @@ const (
 	Consumer   = "test-consumer"
 )
 
-func setupRedis(t *testing.T) (uri string, terminate func()) {
+func setupRedis(t *testing.T) (string, func()) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -47,7 +48,8 @@ func setupRedis(t *testing.T) (uri string, terminate func()) {
 		t.Fatalf("failed to get Redis container port: %v", err)
 	}
 
-	uri = fmt.Sprintf("redis://%s:%s", host, port.Port())
+	hostPort := net.JoinHostPort(host, port.Port())
+	uri := fmt.Sprintf("redis://%s", hostPort)
 
 	return uri, func() {
 		_ = redisC.Terminate(ctx)
@@ -68,7 +70,6 @@ func TestPublish(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 

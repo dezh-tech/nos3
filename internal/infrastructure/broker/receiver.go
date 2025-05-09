@@ -5,8 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"nos3/internal/domain/repository/broker"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type Receiver struct {
