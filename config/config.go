@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 
+	"nos3/internal/infrastructure/broker"
+
 	"nos3/internal/infrastructure/database"
 
 	"github.com/joho/godotenv"
@@ -13,10 +15,12 @@ import (
 
 // Config represents the configs used by services on system.
 type Config struct {
-	Environment   string               `yaml:"environment"`
-	MinIOClient   minio.ClientConfig   `yaml:"minio_client"`
-	MinIOUploader minio.UploaderConfig `yaml:"minio_uploader"`
-	DBConfig      database.Config      `yaml:"db_config"`
+	Environment     string                 `yaml:"environment"`
+	MinIOClient     minio.ClientConfig     `yaml:"minio_client"`
+	MinIOUploader   minio.UploaderConfig   `yaml:"minio_uploader"`
+	DBConfig        database.Config        `yaml:"db_config"`
+	BrokerConfig    broker.Config          `yaml:"redis_broker_config"`
+	PublisherConfig broker.PublisherConfig `yaml:"publisher_config"`
 }
 
 func Load(path string) (*Config, error) {
@@ -49,6 +53,7 @@ func Load(path string) (*Config, error) {
 	config.MinIOClient.AccessKey = os.Getenv("MINIO_ROOT_USER")
 	config.MinIOClient.SecretKey = os.Getenv("MINIO_ROOT_PASSWORD")
 	config.DBConfig.URI = os.Getenv("DATABASE_URI")
+	config.BrokerConfig.URI = os.Getenv("BROKER_URI")
 
 	if err = config.basicCheck(); err != nil {
 		return nil, Error{

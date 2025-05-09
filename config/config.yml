@@ -30,3 +30,20 @@ db_config:
 
   # query_timeout_in_ms defines the timeout for querying to the database
   query_timeout_in_ms: 5000
+
+
+# redis_broker_config specifies settings for redis broker
+redis_broker_config:
+
+  # stream_name defines the name
+  stream_name: "blobs"
+
+  # group_name defines the group
+  group_name: "blob_processors"
+
+
+# publisher_config specifies settings for message queue publisher
+publisher_config:
+
+  # timeout_in_ms defines the publishing timeout
+  timeout_in_ms: 5000
