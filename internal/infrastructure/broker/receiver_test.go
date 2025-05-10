@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"nos3/internal/infrastructure/grpcclient"
 	"sync"
 	"testing"
 	"time"
@@ -55,7 +56,7 @@ func TestMessages_SingleAndMultipleMessages(t *testing.T) {
 				URI:        uri,
 				StreamName: StreamName,
 				GroupName:  GroupName,
-			})
+			}, &grpcclient.Client{})
 			assert.NoError(t, err)
 			defer client.Close()
 
@@ -90,7 +91,7 @@ func TestMessages_ConcurrentConsumers(t *testing.T) {
 		URI:        uri,
 		StreamName: StreamName,
 		GroupName:  GroupName,
-	})
+	}, &grpcclient.Client{})
 	assert.NoError(t, err)
 	defer client.Close()
 
@@ -147,7 +148,7 @@ func TestMessages_ContextCancel(t *testing.T) {
 		URI:        uri,
 		StreamName: StreamName,
 		GroupName:  GroupName,
-	})
+	}, &grpcclient.Client{})
 	assert.NoError(t, err)
 	defer client.Close()
 

@@ -9,6 +9,7 @@ import (
 
 	"nos3/internal/infrastructure/database"
 
+	"github.com/dezh-tech/immortal/pkg/logger"
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 
@@ -24,6 +25,7 @@ type Config struct {
 	BrokerConfig    broker.Config          `yaml:"redis_broker_config"`
 	PublisherConfig broker.PublisherConfig `yaml:"publisher_config"`
 	GRPCClient      grpcclient.Config      `yaml:"manager"`
+	Logger          logger.Config          `yaml:"logger"`
 }
 
 func Load(path string) (*Config, error) {

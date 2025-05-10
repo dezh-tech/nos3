@@ -3,6 +3,7 @@ module nos3
 go 1.24.1
 
 require (
+	github.com/dezh-tech/immortal v0.0.10
 	github.com/gabriel-vasile/mimetype v1.4.9
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
@@ -61,7 +62,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/minio/crc64nvme v1.0.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
@@ -82,6 +83,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
+	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
@@ -113,4 +115,5 @@ require (
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250414145226-207652e42e2e // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

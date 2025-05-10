@@ -3,16 +3,19 @@ package broker
 import (
 	"context"
 
+	"nos3/internal/infrastructure/grpcclient"
+
 	"github.com/redis/go-redis/v9"
 )
 
 type Client struct {
-	redis  *redis.Client
-	stream string
-	group  string
+	redis      *redis.Client
+	stream     string
+	group      string
+	grpcClient *grpcclient.Client
 }
 
-func NewClient(cfg Config) (*Client, error) {
+func NewClient(cfg Config, grpcClient *grpcclient.Client) (*Client, error) {
 	opt, err := redis.ParseURL(cfg.URI)
 	if err != nil {
 		return nil, err
@@ -27,9 +30,10 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 
 	return &Client{
-		redis:  rdb,
-		stream: cfg.StreamName,
-		group:  cfg.GroupName,
+		redis:      rdb,
+		stream:     cfg.StreamName,
+		group:      cfg.GroupName,
+		grpcClient: grpcClient,
 	}, nil
 }
 

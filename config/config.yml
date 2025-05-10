@@ -62,3 +62,25 @@ manager:
   # region is the location for this specific relay.
   # default is global.
   region: global
+
+
+# log contains configs for logs output in console and file.
+logger:
+  # level determine the log level.
+  level: "info"
+
+  # filename is the output file containing logs.
+  filename: "immortal.log"
+
+  # max_size_in_mb is the maximum size of log file.
+  max_size_in_mb: 10
+
+  # max_backups determines the maximum number of backup of log file size.
+  max_backups: 10
+
+  # compress determines to compress the log files or not.
+  compress: true
+
+  # targets is targets for logs to be written to.
+  targets: [file, console]
+  

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"nos3/internal/infrastructure/grpcclient"
 	"testing"
 	"time"
 
@@ -80,7 +81,7 @@ func TestPublish(t *testing.T) {
 				URI:        uri,
 				StreamName: StreamName,
 				GroupName:  GroupName,
-			})
+			}, &grpcclient.Client{})
 			if err != nil {
 				t.Fatalf("failed to create Redis client: %v", err)
 			}
