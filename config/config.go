@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 
+	"nos3/internal/infrastructure/grpcclient"
+
 	"nos3/internal/infrastructure/broker"
 
 	"nos3/internal/infrastructure/database"
@@ -21,6 +23,7 @@ type Config struct {
 	DBConfig        database.Config        `yaml:"db_config"`
 	BrokerConfig    broker.Config          `yaml:"redis_broker_config"`
 	PublisherConfig broker.PublisherConfig `yaml:"publisher_config"`
+	GRPCClient      grpcclient.Config      `yaml:"manager"`
 }
 
 func Load(path string) (*Config, error) {

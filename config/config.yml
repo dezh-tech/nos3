@@ -47,3 +47,18 @@ publisher_config:
 
   # timeout_in_ms defines the publishing timeout
   timeout_in_ms: 5000
+
+
+# manager contains information about connection with manager instance.
+manager:
+  # IP address of manager instance.
+  # default is local network manager:8888.
+  endpoint: "manager:8888"
+
+  # duration for manager to ping this relay.
+  # default is 1 minute.
+  heartbeat_in_second: 60
+
+  # region is the location for this specific relay.
+  # default is global.
+  region: global
