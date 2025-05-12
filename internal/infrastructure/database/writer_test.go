@@ -79,10 +79,10 @@ func TestWrite(t *testing.T) {
 		DBName:            TestDBName,
 		ConnectionTimeout: 30000,
 		QueryTimeout:      30000,
-	})
+	}, &MockGRPC{})
 	require.NoError(t, err)
 
-	writer := NewBlobWriter(db)
+	writer := NewBlobWriter(db, &MockGRPC{})
 
 	baseBlob := &model.Blob{
 		ID:           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",

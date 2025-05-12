@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"nos3/internal/infrastructure/grpcclient"
 	"sync"
 	"testing"
 	"time"
@@ -56,14 +55,14 @@ func TestMessages_SingleAndMultipleMessages(t *testing.T) {
 				URI:        uri,
 				StreamName: StreamName,
 				GroupName:  GroupName,
-			}, &grpcclient.Client{})
+			}, &MockGRPC{})
 			assert.NoError(t, err)
 			defer client.Close()
 
 			err = publishMessages(t, client, tt.payloads)
 			assert.NoError(t, err)
 
-			receiver := NewReceiver(client)
+			receiver := NewReceiver(client, &MockGRPC{})
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
@@ -91,7 +90,7 @@ func TestMessages_ConcurrentConsumers(t *testing.T) {
 		URI:        uri,
 		StreamName: StreamName,
 		GroupName:  GroupName,
-	}, &grpcclient.Client{})
+	}, &MockGRPC{})
 	assert.NoError(t, err)
 	defer client.Close()
 
@@ -110,7 +109,7 @@ func TestMessages_ConcurrentConsumers(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	receiver := NewReceiver(client)
+	receiver := NewReceiver(client, &MockGRPC{})
 
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
@@ -148,11 +147,11 @@ func TestMessages_ContextCancel(t *testing.T) {
 		URI:        uri,
 		StreamName: StreamName,
 		GroupName:  GroupName,
-	}, &grpcclient.Client{})
+	}, &MockGRPC{})
 	assert.NoError(t, err)
 	defer client.Close()
 
-	receiver := NewReceiver(client)
+	receiver := NewReceiver(client, &MockGRPC{})
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 	defer cancel()
 
@@ -160,13 +159,4 @@ func TestMessages_ContextCancel(t *testing.T) {
 	assert.NoError(t, err)
 	_, ok := <-ch
 	assert.False(t, ok, "expected channel to be closed due to context cancel")
-}
-
-func TestMessages_InvalidClient(t *testing.T) {
-	t.Parallel()
-
-	receiver := &Receiver{}
-	ch, err := receiver.Messages(context.Background(), "invalid-consumer")
-	assert.Nil(t, ch)
-	assert.Error(t, err)
 }

@@ -5,10 +5,25 @@ import (
 	"testing"
 	"time"
 
-	"nos3/internal/domain/model"
-
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"nos3/internal/domain/model"
+	"nos3/internal/infrastructure/grpcclient"
+	"nos3/internal/infrastructure/grpcclient/gen"
 )
+
+type MockGRPC struct {
+	mock.Mock
+}
+
+func (m *MockGRPC) RegisterService(_ context.Context, _, _ string) (*gen.RegisterServiceResponse, error) {
+	return &gen.RegisterServiceResponse{}, nil
+}
+
+func (m *MockGRPC) AddLog(_ context.Context, _, _ string) (*gen.AddLogResponse, error) {
+	return &gen.AddLogResponse{}, nil
+}
 
 func TestRetrieve(t *testing.T) {
 	t.Parallel()
@@ -19,10 +34,10 @@ func TestRetrieve(t *testing.T) {
 		DBName:            TestDBName,
 		ConnectionTimeout: 30000,
 		QueryTimeout:      30000,
-	})
+	}, &grpcclient.Client{})
 	require.NoError(t, err)
 
-	retriever := NewBlobRetriever(db)
+	retriever := NewBlobRetriever(db, &MockGRPC{})
 
 	ctx := context.Background()
 	coll := db.Client.Database(TestDBName).Collection(BlobCollection)
