@@ -25,7 +25,7 @@ There are some makefile targets that you can use when developing this codebase:
 - `unit-test`, `test`, `test-race`: runs all existing tests.
 - `fmt`: formats the code using gofumpt. (Run before `check` target always.)
 - `check`: runs golangci-lint linter based on its [config](./.golangci.yml).
-- `build`: build an immortal binary on the `build/immortal` path.
+- `build`: build an nos3 binary on the `build/nos3` path.
 - `pre-commit`: executes formatter, linter, and tests.
 - `compose-up`: spins up the development docker compose, which runs all required third-party development services.
 - `compose-down`: stops the development docker compose stuff.
@@ -62,7 +62,7 @@ Follow these rules for help messages for CLI commands and flags:
 
 ## Commit Guidelines
 
-Please follow these rules when committing changes to the Immortal:
+Please follow these rules when committing changes to the NOS3:
 
 - Each commit should represent a single, atomic change to the codebase.
   Avoid making multiple unrelated changes in a single commit.
