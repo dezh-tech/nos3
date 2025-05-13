@@ -102,8 +102,8 @@ Multiple scopes can be used if the changes impact several areas.
 
   - Correct ✅: "feat(ws): close stale connections."
   - Correct ✅: "feat(ws, config): max_wss connection limit"
-  - Incorrect ❌: 'feat(config): Blacklist npubs"
-  - Incorrect ❌: 'feat(config): blacklisted npubs"
+  - Incorrect ❌: "feat(config): Blacklist npubs"
+  - Incorrect ❌: "feat(config): blacklisted npubs"
 
 -------------------------------------------------
 
