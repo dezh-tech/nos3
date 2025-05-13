@@ -19,7 +19,7 @@ The NOS3 is Blossom protocol implementation aimed and designed to be **scalable*
 
 Here is a list of supported BUDs:
 
-- [] BUD-01
+- [ ] BUD-01
 
  <!--adding the rest of BUDs  -->
 
