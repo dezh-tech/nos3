@@ -75,7 +75,7 @@ List of conventional commit [types](https://github.com/commitizen/conventional-c
 
 | Types    | Description                                                                       |
 | -------- | --------------------------------------------------------------------------------- |
-| fix      | A big fix                                                                         |
+| fix      | A bug fix                                                                         |
 | feat     | A new feature                                                                     |
 | docs     | Documentation only changes                                                        |
 | test     | Adding missing tests or correcting existing tests                                 |
