@@ -9,8 +9,11 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"nos3/internal/infrastructure/grpcclient/gen"
 )
 
 const (
@@ -19,6 +22,18 @@ const (
 	GroupName  = "test-group"
 	Consumer   = "test-consumer"
 )
+
+type MockGRPC struct {
+	mock.Mock
+}
+
+func (m *MockGRPC) RegisterService(_ context.Context, _, _ string) (*gen.RegisterServiceResponse, error) {
+	return &gen.RegisterServiceResponse{}, nil
+}
+
+func (m *MockGRPC) AddLog(_ context.Context, _, _ string) (*gen.AddLogResponse, error) {
+	return &gen.AddLogResponse{}, nil
+}
 
 func setupRedis(t *testing.T) (string, func()) {
 	t.Helper()
@@ -80,13 +95,13 @@ func TestPublish(t *testing.T) {
 				URI:        uri,
 				StreamName: StreamName,
 				GroupName:  GroupName,
-			})
+			}, &MockGRPC{})
 			if err != nil {
 				t.Fatalf("failed to create Redis client: %v", err)
 			}
 			defer client.Close()
 
-			publisher := NewPublisher(client, PublisherConfig{Timeout: 1000})
+			publisher := NewPublisher(client, PublisherConfig{Timeout: 1000}, &MockGRPC{})
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()

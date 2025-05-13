@@ -7,6 +7,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	grpcRepository "nos3/internal/domain/repository/grpcclient"
+	"nos3/pkg/logger"
 )
 
 const BlobCollection = "blob"
@@ -15,9 +18,12 @@ type Database struct {
 	DBName       string
 	QueryTimeout time.Duration
 	Client       *mongo.Client
+	grpcClient   grpcRepository.IClient
 }
 
-func Connect(cfg Config) (*Database, error) {
+func Connect(cfg Config, grpcClient grpcRepository.IClient) (*Database, error) {
+	logger.Info("connecting to database")
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ConnectionTimeout)*time.Millisecond)
 	defer cancel()
 
@@ -32,6 +38,10 @@ func Connect(cfg Config) (*Database, error) {
 
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
+		if _, logErr := grpcClient.AddLog(ctx, "failed to connect to MongoDB", err.Error()); logErr != nil {
+			logger.Error("can't send log to manager", "err", logErr)
+		}
+
 		return nil, err
 	}
 
@@ -39,6 +49,10 @@ func Connect(cfg Config) (*Database, error) {
 	defer cancel()
 
 	if err := client.Ping(qCtx, nil); err != nil {
+		if _, logErr := grpcClient.AddLog(ctx, "failed to ping MongoDB", err.Error()); logErr != nil {
+			logger.Error("can't send log to manager", "err", logErr)
+		}
+
 		return nil, err
 	}
 
@@ -46,9 +60,12 @@ func Connect(cfg Config) (*Database, error) {
 		Client:       client,
 		DBName:       cfg.DBName,
 		QueryTimeout: time.Duration(cfg.QueryTimeout) * time.Millisecond,
+		grpcClient:   grpcClient,
 	}
 
 	if err := initBlobCollection(db); err != nil {
+		logger.Error("failed to initialize blob collection", err.Error())
+
 		return nil, err
 	}
 
@@ -61,6 +78,10 @@ func initBlobCollection(db *Database) error {
 
 	collections, err := db.Client.Database(db.DBName).ListCollectionNames(ctx, bson.M{"name": BlobCollection})
 	if err != nil {
+		if _, logErr := db.grpcClient.AddLog(ctx, "failed to list collection names", err.Error()); logErr != nil {
+			logger.Error("can't send log to manager", "err", logErr)
+		}
+
 		return err
 	}
 	if len(collections) > 0 {
@@ -112,18 +133,33 @@ func initBlobCollection(db *Database) error {
 
 	err = db.Client.Database(db.DBName).CreateCollection(ctx, BlobCollection, collOpts)
 	if err != nil {
+		if _, logErr := db.grpcClient.AddLog(ctx, "failed to create collection", err.Error()); logErr != nil {
+			logger.Error("can't send log to manager", "err", logErr)
+		}
+
 		return err
 	}
+
 	coll := db.Client.Database(db.DBName).Collection(BlobCollection)
 	_, err = coll.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys: bson.D{{Key: "author", Value: 1}},
 	})
+	if err != nil {
+		if _, logErr := db.grpcClient.AddLog(ctx, "failed to create index", err.Error()); logErr != nil {
+			logger.Error("can't send log to manager", "err", logErr)
+		}
+	}
 
 	return err
 }
 
 func (db *Database) Stop() error {
 	if err := db.Client.Disconnect(context.Background()); err != nil {
+		if _, logErr := db.grpcClient.AddLog(context.Background(),
+			"failed to disconnect from MongoDB", err.Error()); logErr != nil {
+			logger.Error("can't send log to manager", "err", logErr)
+		}
+
 		return err
 	}
 

@@ -12,6 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"nos3/pkg/logger"
+
+	grpcRepository "nos3/internal/domain/repository/grpcclient"
+
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
@@ -19,12 +23,14 @@ import (
 
 type Uploader struct {
 	minioClient *minio.Client
+	grpcClient  grpcRepository.IClient
 	cfg         *UploaderConfig
 }
 
-func NewUploader(minioClient *minio.Client, config *UploaderConfig) *Uploader {
+func NewUploader(minioClient *minio.Client, grpcClient grpcRepository.IClient, config *UploaderConfig) *Uploader {
 	return &Uploader{
 		minioClient: minioClient,
+		grpcClient:  grpcClient,
 		cfg:         config,
 	}
 }
@@ -95,7 +101,7 @@ func (u *Uploader) processFileChunks(ctx context.Context, body io.ReadCloser, bu
 
 	for {
 		n, err := body.Read(buf)
-		if n > 0 {
+		if n > 0 { //nolint
 			chunk := buf[:n]
 			_, _ = hasher.Write(chunk)
 
@@ -114,6 +120,11 @@ func (u *Uploader) processFileChunks(ctx context.Context, body io.ReadCloser, bu
 					ContentType: detectedMIME,
 				})
 			if err != nil {
+				if _, logErr := u.grpcClient.AddLog(ctx, "failed to upload chunk",
+					fmt.Sprintf("chunk: %s, error: %v", chunkName, err)); logErr != nil {
+					logger.Error("can't send log to manager", "err", logErr)
+				}
+
 				return "", 0, fmt.Errorf("chunk upload failed: %w", err)
 			}
 
@@ -124,6 +135,8 @@ func (u *Uploader) processFileChunks(ctx context.Context, body io.ReadCloser, bu
 			break
 		}
 		if err != nil {
+			logger.Error("read error", "err", err.Error())
+
 			return "", 0, fmt.Errorf("read error: %w", err)
 		}
 	}
@@ -140,6 +153,10 @@ func (u *Uploader) composeChunks(ctx context.Context, bucketName string, chunkNa
 	dst := minio.CopyDestOptions{Bucket: bucketName, Object: finalName}
 	_, err := u.minioClient.ComposeObject(ctx, dst, sources...)
 	if err != nil {
+		if _, logErr := u.grpcClient.AddLog(ctx, "failed to compose chunks", err.Error()); logErr != nil {
+			logger.Error("can't send log to manager", "err", logErr)
+		}
+
 		return fmt.Errorf("compose error: %w", err)
 	}
 
@@ -166,7 +183,9 @@ func (u *Uploader) cleanupChunks(ctx context.Context, bucketName string, chunkNa
 	for _, name := range chunkNames {
 		err := u.minioClient.RemoveObject(ctx, bucketName, name, minio.RemoveObjectOptions{})
 		if err != nil {
-			continue
+			if _, logErr := u.grpcClient.AddLog(ctx, "failed to cleanup chunk", err.Error()); logErr != nil {
+				logger.Error("can't send log to manager", "err", logErr)
+			}
 		}
 	}
 }

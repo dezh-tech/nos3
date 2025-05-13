@@ -10,12 +10,28 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
+
+	"nos3/internal/infrastructure/grpcclient/gen"
+
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+type MockGRPC struct {
+	mock.Mock
+}
+
+func (m *MockGRPC) RegisterService(_ context.Context, _, _ string) (*gen.RegisterServiceResponse, error) {
+	return &gen.RegisterServiceResponse{}, nil
+}
+
+func (m *MockGRPC) AddLog(_ context.Context, _, _ string) (*gen.AddLogResponse, error) {
+	return &gen.AddLogResponse{}, nil
+}
 
 const (
 	TestAccessKey = "minioadmin"
@@ -106,7 +122,7 @@ func TestUploadFile(t *testing.T) {
 		_ = container.Terminate(context.Background())
 	})
 
-	uploader := NewUploader(client, &UploaderConfig{
+	uploader := NewUploader(client, &MockGRPC{}, &UploaderConfig{
 		Timeout: 3000,
 		Bucket:  BucketName,
 	})

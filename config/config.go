@@ -3,14 +3,14 @@ package config
 import (
 	"os"
 
-	"nos3/internal/infrastructure/broker"
-
-	"nos3/internal/infrastructure/database"
-
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 
+	"nos3/internal/infrastructure/broker"
+	"nos3/internal/infrastructure/database"
+	"nos3/internal/infrastructure/grpcclient"
 	"nos3/internal/infrastructure/minio"
+	"nos3/pkg/logger"
 )
 
 // Config represents the configs used by services on system.
@@ -21,6 +21,8 @@ type Config struct {
 	DBConfig        database.Config        `yaml:"db_config"`
 	BrokerConfig    broker.Config          `yaml:"redis_broker_config"`
 	PublisherConfig broker.PublisherConfig `yaml:"publisher_config"`
+	GRPCClient      grpcclient.Config      `yaml:"manager"`
+	Logger          logger.Config          `yaml:"logger"`
 }
 
 func Load(path string) (*Config, error) {
