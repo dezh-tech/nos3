@@ -3,11 +3,11 @@ package minio
 import (
 	"context"
 
-	"github.com/dezh-tech/immortal/pkg/logger"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
 	grpcRepository "nos3/internal/domain/repository/grpcclient"
+	"nos3/pkg/logger"
 )
 
 type Client struct {

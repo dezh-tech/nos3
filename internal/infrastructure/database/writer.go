@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 
-	"github.com/dezh-tech/immortal/pkg/logger"
+	"nos3/pkg/logger"
 
 	"nos3/internal/domain/model"
 	grpcRepository "nos3/internal/domain/repository/grpcclient"

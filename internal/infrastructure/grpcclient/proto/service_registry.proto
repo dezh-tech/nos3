@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package manager.v1;
 
-option go_package = "github.com/dezh-tech/immortal/infrastructure/grpcclient/gen";
+option go_package = "nos3/internal/infrastructure/grpcclient/gen";
 
 service ServiceRegistry {
   rpc RegisterService (RegisterServiceRequest) returns (RegisterServiceResponse);

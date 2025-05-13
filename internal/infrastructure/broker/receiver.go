@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dezh-tech/immortal/pkg/logger"
 	"github.com/redis/go-redis/v9"
 
 	"nos3/internal/domain/repository/broker"
 	grpcRepository "nos3/internal/domain/repository/grpcclient"
+	"nos3/pkg/logger"
 )
 
 type Receiver struct {
@@ -29,6 +29,7 @@ func NewReceiver(client *Client, grpcClient grpcRepository.IClient) *Receiver {
 		grpcClient: grpcClient,
 	}
 }
+
 func (r *Receiver) Messages(ctx context.Context, consumerName string) (<-chan broker.Message, error) {
 	if r.redis == nil {
 		logger.Error("redis client is nil in receiver")

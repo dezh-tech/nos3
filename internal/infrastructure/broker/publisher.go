@@ -5,10 +5,10 @@ import (
 	"errors"
 	"time"
 
-	grpcRepository "nos3/internal/domain/repository/grpcclient"
-
-	"github.com/dezh-tech/immortal/pkg/logger"
 	"github.com/redis/go-redis/v9"
+
+	grpcRepository "nos3/internal/domain/repository/grpcclient"
+	"nos3/pkg/logger"
 )
 
 type Publisher struct {

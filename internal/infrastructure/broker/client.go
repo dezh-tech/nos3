@@ -3,10 +3,10 @@ package broker
 import (
 	"context"
 
-	"github.com/dezh-tech/immortal/pkg/logger"
 	"github.com/redis/go-redis/v9"
 
 	"nos3/internal/domain/repository/grpcclient"
+	"nos3/pkg/logger"
 )
 
 type Client struct {

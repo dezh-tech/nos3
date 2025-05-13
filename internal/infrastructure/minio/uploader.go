@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dezh-tech/immortal/pkg/logger"
+	"nos3/pkg/logger"
 
 	grpcRepository "nos3/internal/domain/repository/grpcclient"
 

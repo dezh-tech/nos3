@@ -3,11 +3,11 @@ package database
 import (
 	"context"
 
-	"github.com/dezh-tech/immortal/pkg/logger"
 	"go.mongodb.org/mongo-driver/bson"
 
 	"nos3/internal/domain/model"
 	grpcRepository "nos3/internal/domain/repository/grpcclient"
+	"nos3/pkg/logger"
 )
 
 type BlobRetriever struct {

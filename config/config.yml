@@ -70,7 +70,7 @@ logger:
   level: "info"
 
   # filename is the output file containing logs.
-  filename: "immortal.log"
+  filename: "nos3.log"
 
   # max_size_in_mb is the maximum size of log file.
   max_size_in_mb: 10
