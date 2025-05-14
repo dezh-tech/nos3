@@ -13,15 +13,28 @@ NOS3
 <br/>
 
 
-The NOS3 is Blossom protocol implementation aimed and designed to be **scalable**, **high-performance**, **configurable**, and **safe**. It's a good choice for paid services or big community servers and not a good choice for a personal usage.
+The NOS3 is a Blossom protocol implementation designed to be scalable, high-performance, configurable, and safe. It's a good choice for paid services or big community servers, but not for personal usage.
 
 ## Supported BUDs
 
 Here is a list of supported BUDs:
 
-- [ ] BUD-01
+- [ ] BUD-01: Server requirements and blob retrieval
+- [ ] BUD-02: Blob upload and management
+- [ ] BUD-03: User Server List
+- [ ] BUD-04: Mirroring blobs
+- [ ] BUD-05: Media optimization
+- [ ] BUD-06: Upload requirements
+- [ ] BUD-08: Nostr File Metadata Tags
+- [ ] BUD-09: Blob Report
+- [ ] BUD-12: Media servers information document
 
- <!--adding the rest of BUDs  -->
+## Features
+
+- [ ] Hosting blobs using S3, not disk storage
+- [ ] Blob Compression and Size processing(?)
+- [ ] Object detection and CASM reporting
+- [ ] Statistics
 
 ## Updates
 
