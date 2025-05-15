@@ -34,6 +34,7 @@ Here is a list of supported BUDs:
 - [ ] Hosting blobs using S3, not disk storage
 - [ ] Blob Compression and Size processing(?)
 - [ ] Object detection and CASM reporting
+- [ ] Malware detection
 - [ ] Statistics
 
 ## Updates
@@ -63,4 +64,4 @@ dezh@coinos.io
 
 ## License
 
-The NOS3 software is published under the [MIT License](./LICENSE) and contributing and using this code means you agree with the license.
+The NOS3 software is published under the [MIT License](./LICENSE), and contributing to and using this code means you agree with the license.
