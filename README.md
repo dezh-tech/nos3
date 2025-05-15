@@ -53,13 +53,13 @@ Donations and financial support for the development process are possible using B
 **on-chain**:
 
 ```
-bc1qa0z44j7m0v0rx85q0cag5juhxdshnmnrxnlr32
+bc1qfw30k9ztahppatweycnll05rzmrn6u07slehmc
 ```
 
 **lightning**: 
 
 ```
-dezh@coinos.io
+donate@dezh.tech
 ```
 
 ## License
