@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 
+	"nos3/internal"
+
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 
@@ -15,9 +17,11 @@ import (
 
 // Config represents the configs used by services on system.
 type Config struct {
+	Default         internal.DefaultConfig `yaml:"default"`
 	Environment     string                 `yaml:"environment"`
 	MinIOClient     minio.ClientConfig     `yaml:"minio_client"`
 	MinIOUploader   minio.UploaderConfig   `yaml:"minio_uploader"`
+	MinIORemover    minio.RemoverConfig    `yaml:"minio_remover"`
 	DBConfig        database.Config        `yaml:"db_config"`
 	BrokerConfig    broker.Config          `yaml:"redis_broker_config"`
 	PublisherConfig broker.PublisherConfig `yaml:"publisher_config"`

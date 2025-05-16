@@ -91,7 +91,7 @@ func initBlobCollection(db *Database) error {
 	collOpts := options.CreateCollection().SetValidator(bson.M{
 		"$jsonSchema": bson.M{
 			"bsonType": "object",
-			"required": []string{"_id", "minio_address", "upload_time", "author", "blob_type"},
+			"required": []string{"_id", "bucket", "minio_address", "upload_time", "author", "blob_type"},
 			"properties": bson.M{
 				"_id": bson.M{
 					"bsonType":    "string",
@@ -99,6 +99,7 @@ func initBlobCollection(db *Database) error {
 					"maxLength":   64,
 					"description": "must be 64-character SHA hash",
 				},
+				"bucket":        bson.M{"bsonType": "string"},
 				"minio_address": bson.M{"bsonType": "string"},
 				"upload_time":   bson.M{"bsonType": "date"},
 				"author": bson.M{
