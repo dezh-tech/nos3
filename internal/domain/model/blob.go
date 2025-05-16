@@ -4,6 +4,7 @@ import "time"
 
 type Blob struct {
 	ID           string      `bson:"_id"`
+	Bucket       string      `bson:"bucket"`
 	MinIOAddress string      `bson:"minio_address"`
 	UploadTime   time.Time   `bson:"upload_time"`
 	Author       string      `bson:"author"`
