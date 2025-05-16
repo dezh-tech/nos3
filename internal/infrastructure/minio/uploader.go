@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"nos3/internal/domain/entity"
+
 	"nos3/pkg/logger"
 
 	grpcRepository "nos3/internal/domain/repository/grpcclient"
@@ -35,14 +37,9 @@ func NewUploader(minioClient *minio.Client, grpcClient grpcRepository.IClient, c
 	}
 }
 
-type UploadFileResult struct {
-	Size int64  `json:"size"`
-	Type string `json:"type"`
-}
-
 func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize int64, expectedHash,
 	expectedType string,
-) (UploadFileResult, error) {
+) (entity.MinIOUploadResult, error) {
 	defer body.Close()
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(u.cfg.Timeout)*time.Millisecond)
@@ -56,38 +53,39 @@ func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize 
 	if err != nil {
 		u.cleanupChunks(ctx, bucketName, chunkNames)
 
-		return UploadFileResult{}, err
+		return entity.MinIOUploadResult{}, err
 	}
 
 	if len(chunkNames) == 0 {
-		return UploadFileResult{}, errors.New("read error: empty file")
+		return entity.MinIOUploadResult{}, errors.New("read error: empty file")
 	}
 
 	if err := u.validateFileSize(totalBytes, fileSize); err != nil {
 		u.cleanupChunks(ctx, bucketName, chunkNames)
 
-		return UploadFileResult{}, err
+		return entity.MinIOUploadResult{}, err
 	}
 
 	calculatedHash := hex.EncodeToString(hasher.Sum(nil))
 	if err := u.validateFileHash(calculatedHash, expectedHash); err != nil {
 		u.cleanupChunks(ctx, bucketName, chunkNames)
 
-		return UploadFileResult{}, err
+		return entity.MinIOUploadResult{}, err
 	}
 
 	finalName := calculatedHash
-	if err := u.composeChunks(ctx, bucketName, chunkNames, finalName); err != nil {
-		u.cleanupChunks(ctx, bucketName, chunkNames)
-
-		return UploadFileResult{}, err
-	}
-
+	location, err := u.composeChunks(ctx, bucketName, chunkNames, finalName)
 	u.cleanupChunks(ctx, bucketName, chunkNames)
 
-	return UploadFileResult{
-		Size: totalBytes,
-		Type: detectedMIME,
+	if err != nil {
+		return entity.MinIOUploadResult{}, err
+	}
+
+	return entity.MinIOUploadResult{
+		Size:     totalBytes,
+		Type:     detectedMIME,
+		Location: location,
+		Bucket:   bucketName,
 	}, nil
 }
 
@@ -144,23 +142,24 @@ func (u *Uploader) processFileChunks(ctx context.Context, body io.ReadCloser, bu
 	return detectedMIME, totalBytes, nil
 }
 
-func (u *Uploader) composeChunks(ctx context.Context, bucketName string, chunkNames []string, finalName string) error {
+func (u *Uploader) composeChunks(ctx context.Context, bucketName string, chunkNames []string,
+	finalName string) (string, error) {
 	sources := make([]minio.CopySrcOptions, len(chunkNames))
 	for i, name := range chunkNames {
 		sources[i] = minio.CopySrcOptions{Bucket: bucketName, Object: name}
 	}
 
 	dst := minio.CopyDestOptions{Bucket: bucketName, Object: finalName}
-	_, err := u.minioClient.ComposeObject(ctx, dst, sources...)
+	info, err := u.minioClient.ComposeObject(ctx, dst, sources...)
 	if err != nil {
 		if _, logErr := u.grpcClient.AddLog(ctx, "failed to compose chunks", err.Error()); logErr != nil {
 			logger.Error("can't send log to manager", "err", logErr)
 		}
 
-		return fmt.Errorf("compose error: %w", err)
+		return "", fmt.Errorf("compose error: %w", err)
 	}
 
-	return nil
+	return info.Location, nil
 }
 
 func (u *Uploader) validateFileSize(totalBytes, expectedSize int64) error {
