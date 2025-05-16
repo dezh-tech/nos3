@@ -21,6 +21,7 @@ type Config struct {
 	Environment     string                 `yaml:"environment"`
 	MinIOClient     minio.ClientConfig     `yaml:"minio_client"`
 	MinIOUploader   minio.UploaderConfig   `yaml:"minio_uploader"`
+	MinIORemover    minio.RemoverConfig    `yaml:"minio_remover"`
 	DBConfig        database.Config        `yaml:"db_config"`
 	BrokerConfig    broker.Config          `yaml:"redis_broker_config"`
 	PublisherConfig broker.PublisherConfig `yaml:"publisher_config"`
