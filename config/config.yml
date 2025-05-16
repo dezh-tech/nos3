@@ -7,6 +7,10 @@
 # default is prod.
 environment: "prod"
 
+# default specifies default settings for app
+default:
+  address: "localhost:5000"
+
 # minio_client specifies settings for the MinIO instance.
 minio_client:
   endpoint: "localhost:9000"
