@@ -208,7 +208,7 @@ func TestUploadFile(t *testing.T) {
 			fileType:         "text/plain",
 			simulateCorrupt:  true,
 			expectError:      true,
-			expectedErrorMsg: "simulated read error",
+			expectedErrorMsg: "failed to read file content",
 		},
 	}
 

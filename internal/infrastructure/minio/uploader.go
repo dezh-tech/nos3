@@ -37,7 +37,8 @@ func NewUploader(minioClient *minio.Client, grpcClient grpcRepository.IClient, c
 }
 
 func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize int64,
-	expectedHash, expectedType string) (entity.MinIOUploadResult, error) {
+	expectedHash, expectedType string,
+) (entity.MinIOUploadResult, error) {
 	defer body.Close()
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(u.cfg.Timeout)*time.Millisecond)
@@ -57,7 +58,7 @@ func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize 
 	if len(chunkNames) == 0 {
 		return entity.MinIOUploadResult{
 			HTTPStatus: http.StatusBadRequest,
-		}, err
+		}, errors.New("read error: empty file")
 	}
 
 	if err := u.validateFileSize(totalBytes, fileSize); err != nil {
@@ -90,7 +91,8 @@ func (u *Uploader) UploadFile(ctx context.Context, body io.ReadCloser, fileSize 
 }
 
 func (u *Uploader) processFileChunks(ctx context.Context, body io.ReadCloser, bucketName string,
-	chunkNames *[]string, hasher hash.Hash, expectedType string) (string, int64, error) {
+	chunkNames *[]string, hasher hash.Hash, expectedType string,
+) (string, int64, error) {
 	var detectedMIME string
 	var totalBytes int64
 	buf := make([]byte, 5*1024*1024)
@@ -137,7 +139,8 @@ func (u *Uploader) processFileChunks(ctx context.Context, body io.ReadCloser, bu
 }
 
 func (u *Uploader) composeChunks(ctx context.Context, bucketName string, chunkNames []string,
-	finalName string) (string, error) {
+	finalName string,
+) (string, error) {
 	sources := make([]minio.CopySrcOptions, len(chunkNames))
 	for i, name := range chunkNames {
 		sources[i] = minio.CopySrcOptions{Bucket: bucketName, Object: name}
