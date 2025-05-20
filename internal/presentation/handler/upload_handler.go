@@ -22,7 +22,7 @@ func (h *UploadHandler) Handle(c echo.Context) error {
 	contentType := c.Request().Header.Get("Content-Type")
 	contentSize := c.Request().ContentLength
 
-	hash, _ := c.Get("t").(string)
+	hash, _ := c.Get(KeyTraceID).(string)
 	author, _ := c.Get("pk").(string)
 	result, err := h.uploader.Upload(context.Background(), body, contentSize, hash, contentType, author)
 	if err != nil {
