@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 	"net/http"
-	"strconv"
+	"nos3/internal/presentation"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -22,7 +22,7 @@ func (h *UploadHandler) Handle(c echo.Context) error {
 	contentType := c.Request().Header.Get("Content-Type")
 	contentSize := c.Request().ContentLength
 
-	hash, _ := c.Get(KeyTraceID).(string)
+	hash, _ := c.Get(presentation.KeyTraceID).(string)
 	author, _ := c.Get("pk").(string)
 	result, err := h.uploader.Upload(context.Background(), body, contentSize, hash, contentType, author)
 	if err != nil {

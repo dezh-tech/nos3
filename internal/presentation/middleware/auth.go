@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"nos3/internal/presentation"
 	"strconv"
 	"strings"
 	"time"
@@ -31,7 +32,7 @@ func authMiddleware(action string) echo.MiddlewareFunc {
 			}
 
 			ctx.Set("pk", event.PubKey)
-			ctx.Set("t", getTagValue(event, "t"))
+			ctx.Set(presentation.KeyTraceID, getTagValue(event, presentation.KeyTraceID))
 			ctx.Set("expiration", getExpirationTime(event))
 
 			return next(ctx)
@@ -81,7 +82,7 @@ func validateEvent(event *nostr.Event, action string) error {
 		return fmt.Errorf("empty expiration tag")
 	}
 
-	t := getTagValue(event, "t")
+	t := getTagValue(event, presentation.KeyTraceID)
 	if t == "" {
 		return fmt.Errorf("empty t tag")
 	}

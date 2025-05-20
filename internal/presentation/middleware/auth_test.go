@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"nos3/internal/presentation"
 	"strconv"
 	"strings"
 	"testing"
@@ -197,7 +198,7 @@ func generateSignedEvent(t *testing.T, kind int, action string, expirationOffset
 		CreatedAt: nostr.Timestamp(time.Now().Unix() - 10),
 		Tags: nostr.Tags{
 			{"expiration", strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
-			{"t", action},
+			{presentation.KeyTraceID, action},
 			{"x", "file_id"},
 		},
 		Content: "",
@@ -226,7 +227,7 @@ func generateSignedEventWithCorrectX(t *testing.T, kind int, action string, expi
 		CreatedAt: nostr.Timestamp(time.Now().Unix() - 10),
 		Tags: nostr.Tags{
 			{"expiration", strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
-			{"t", action},
+			{presentation.KeyTraceID, action},
 			{"x", hexHash},
 		},
 		Content: "",
@@ -248,7 +249,7 @@ func generateSignedEventWithCreatedAt(t *testing.T, kind int, action string, exp
 		CreatedAt: timestamp,
 		Tags: nostr.Tags{
 			{"expiration", strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
-			{"t", action},
+			{presentation.KeyTraceID, action},
 			{"x", "file_id"},
 		},
 		Content: "",
