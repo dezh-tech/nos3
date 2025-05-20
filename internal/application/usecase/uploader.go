@@ -5,27 +5,28 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"nos3/internal/domain/entity"
 	"nos3/internal/domain/model"
-	"nos3/internal/infrastructure/broker"
-	"nos3/internal/infrastructure/database"
-	"nos3/internal/infrastructure/minio"
+	"nos3/internal/domain/repository/broker"
+	"nos3/internal/domain/repository/database"
+	"nos3/internal/domain/repository/minio"
 	"nos3/pkg/logger"
 )
 
 type Uploader struct {
-	publisher      *broker.Publisher
-	writer         *database.BlobWriter
-	minioUploader  *minio.Uploader
-	minioRemover   *minio.Remover
-	dbRemover      *database.BlobRemover
+	publisher      broker.Publisher
+	writer         database.Writer
+	minioUploader  minio.Uploader
+	minioRemover   minio.Remover
+	dbRemover      database.Remover
 	defaultAddress string
 }
 
-func NewUploader(publisher *broker.Publisher, writer *database.BlobWriter,
-	minioUploader *minio.Uploader, minioRemover *minio.Remover, dbRemover *database.BlobRemover, address string,
+func NewUploader(publisher broker.Publisher, writer database.Writer,
+	minioUploader minio.Uploader, minioRemover minio.Remover, dbRemover database.Remover, address string,
 ) *Uploader {
 	return &Uploader{
 		publisher:      publisher,
@@ -42,9 +43,9 @@ func (u *Uploader) Upload(ctx context.Context, body io.ReadCloser, fileSize int6
 ) (entity.UploadResult, error) {
 	result, err := u.minioUploader.UploadFile(ctx, body, fileSize, expectedHash, expectedType)
 	if err != nil {
-		logger.Error("failed to upload file to storage server", "err", err)
-
-		return entity.UploadResult{}, errors.New("failed to upload file to storage server")
+		return entity.UploadResult{
+			Status: result.HTTPStatus,
+		}, err
 	}
 
 	err = u.writer.Write(ctx, &model.Blob{
@@ -65,9 +66,9 @@ func (u *Uploader) Upload(ctx context.Context, body io.ReadCloser, fileSize int6
 			logger.Error("failed to remove file from minio after publish failed", "err", fileErr)
 		}
 
-		logger.Error("failed to add blob to db", "err", err)
-
-		return entity.UploadResult{}, errors.New("failed to add blob to db")
+		return entity.UploadResult{
+			Status: http.StatusInternalServerError,
+		}, errors.New("couldn't add blob to database")
 	}
 
 	err = u.publisher.Publish(ctx, expectedHash)
@@ -82,12 +83,15 @@ func (u *Uploader) Upload(ctx context.Context, body io.ReadCloser, fileSize int6
 
 		logger.Error("failed to publish message to broker for further processing", "err", err)
 
-		return entity.UploadResult{}, errors.New("failed to publish message to broker for further processing")
+		return entity.UploadResult{
+			Status: http.StatusInternalServerError,
+		}, errors.New("failed to publish blob to queue for further processing")
 	}
 
 	return entity.UploadResult{
 		Location: fmt.Sprintf("%s/%s", u.defaultAddress, expectedHash),
 		Type:     result.Type,
 		Size:     result.Size,
+		Status:   http.StatusOK,
 	}, nil
 }
