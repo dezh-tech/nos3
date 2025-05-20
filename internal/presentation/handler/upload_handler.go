@@ -26,7 +26,10 @@ func (h *UploadHandler) Handle(c echo.Context) error {
 	author, _ := c.Get("pk").(string)
 	result, err := h.uploader.Upload(context.Background(), body, contentSize, hash, contentType, author)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		logger.Error("upload failed", "error", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to upload file. Please try again later.",
+		})
 	}
 
 	return c.JSON(http.StatusOK, dto.BlobDescriptor{
