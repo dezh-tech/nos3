@@ -20,12 +20,7 @@ type UploadHandler struct {
 func (h *UploadHandler) Handle(c echo.Context) error {
 	body := c.Request().Body
 	contentType := c.Request().Header.Get("Content-Type")
-	contentLength := c.Request().Header.Get("Content-Length")
-	contentSize, err := strconv.ParseInt(contentLength, 10, 64)
-	if err != nil {
-		logger.Info("could not parse content length", "error", err)
-		contentSize = -1
-	}
+	contentSize := c.Request().ContentLength
 
 	hash, _ := c.Get("t").(string)
 	author, _ := c.Get("pk").(string)
