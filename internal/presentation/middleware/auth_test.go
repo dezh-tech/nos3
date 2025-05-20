@@ -8,11 +8,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"nos3/internal/presentation"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"nos3/internal/presentation"
 
 	"github.com/labstack/echo/v4"
 	"github.com/nbd-wtf/go-nostr"
