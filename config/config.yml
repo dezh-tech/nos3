@@ -23,7 +23,7 @@ minio_uploader:
   # bucket specifies the default bucket name where files will be uploaded.
   bucket: "myapp-temp-uploads"
 
-# minio_remover specifies settings for the MinIO uploader.
+# minio_remover specifies settings for the MinIO remover.
 minio_remover:
   # timeout_in_ms defines the maximum duration (in milliseconds) for requests to the MinIO API.
   timeout_in_ms: 5000
