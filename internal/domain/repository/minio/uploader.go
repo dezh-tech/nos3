@@ -10,5 +10,5 @@ import (
 type Uploader interface {
 	UploadFile(ctx context.Context, body io.ReadCloser, fileSize int64, expectedHash,
 		expectedType string,
-	) (entity.UploadResult, error)
+	) (entity.MinIOUploadResult, error)
 }
