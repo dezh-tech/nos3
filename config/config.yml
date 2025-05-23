@@ -7,6 +7,10 @@
 # default is prod.
 environment: "prod"
 
+# default specifies default settings for app
+default:
+  address: "localhost:5000"
+
 # minio_client specifies settings for the MinIO instance.
 minio_client:
   endpoint: "localhost:9000"
@@ -18,6 +22,12 @@ minio_uploader:
 
   # bucket specifies the default bucket name where files will be uploaded.
   bucket: "myapp-temp-uploads"
+
+# minio_remover specifies settings for the MinIO remover.
+minio_remover:
+  # timeout_in_ms defines the maximum duration (in milliseconds) for requests to the MinIO API.
+  timeout_in_ms: 5000
+
 
 # db_config specifies settings for database
 db_config:
