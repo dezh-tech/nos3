@@ -32,7 +32,7 @@ func AuthMiddleware(action string) echo.MiddlewareFunc {
 				return ctx.String(http.StatusUnauthorized, err.Error())
 			}
 
-			ctx.Set("pk", event.PubKey)
+			ctx.Set(presentation.PK, event.PubKey)
 			ctx.Set(presentation.XTag, getTagValue(event, presentation.XTag))
 			ctx.Set(presentation.TTag, getTagValue(event, presentation.TTag))
 			ctx.Set(presentation.ExpTag, getExpirationTime(event))

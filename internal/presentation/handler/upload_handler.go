@@ -3,9 +3,8 @@ package handler
 import (
 	"context"
 	"net/http"
-	"time"
-
 	"nos3/internal/presentation"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -19,11 +18,12 @@ type UploadHandler struct {
 
 func (h *UploadHandler) Handle(c echo.Context) error {
 	body := c.Request().Body
-	contentType := c.Request().Header.Get("Content-Type")
+	contentType := c.Request().Header.Get(presentation.TypeKey)
 	contentSize := c.Request().ContentLength
 
-	hash, _ := c.Get(presentation.KeyTraceID).(string)
-	author, _ := c.Get("pk").(string)
+	hash := c.Get(presentation.XTag).(string)
+	author := c.Get(presentation.PK).(string)
+
 	result, err := h.uploader.Upload(context.Background(), body, contentSize, hash, contentType, author)
 	if err != nil {
 		return c.JSON(result.Status, map[string]string{

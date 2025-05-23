@@ -6,4 +6,5 @@ const (
 	TypeKey = "Content-Type"
 	XTag    = "x"
 	ExpTag  = "expiration"
+	PK      = "pk"
 )
