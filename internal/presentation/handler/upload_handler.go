@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -25,7 +24,7 @@ func (h *UploadHandler) Handle(c echo.Context) error {
 	hash := c.Get(presentation.XTag).(string)
 	author := c.Get(presentation.PK).(string)
 
-	result, err := h.uploader.Upload(context.Background(), body, contentSize, hash, contentType, author)
+	result, err := h.uploader.Upload(c.Request().Context(), body, contentSize, hash, contentType, author)
 	if err != nil {
 		return c.JSON(result.Status, map[string]string{
 			"error": err.Error(),
