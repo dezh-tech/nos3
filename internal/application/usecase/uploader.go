@@ -19,18 +19,20 @@ import (
 type Uploader struct {
 	publisher      broker.Publisher
 	writer         database.Writer
+	retriever      database.Retriever
 	minioUploader  minio.Uploader
 	minioRemover   minio.Remover
 	dbRemover      database.Remover
 	defaultAddress string
 }
 
-func NewUploader(publisher broker.Publisher, writer database.Writer,
+func NewUploader(publisher broker.Publisher, retriever database.Retriever, writer database.Writer,
 	minioUploader minio.Uploader, minioRemover minio.Remover, dbRemover database.Remover, address string,
 ) *Uploader {
 	return &Uploader{
 		publisher:      publisher,
 		writer:         writer,
+		retriever:      retriever,
 		minioUploader:  minioUploader,
 		minioRemover:   minioRemover,
 		dbRemover:      dbRemover,
@@ -41,6 +43,17 @@ func NewUploader(publisher broker.Publisher, writer database.Writer,
 func (u *Uploader) Upload(ctx context.Context, body io.ReadCloser, fileSize int64,
 	expectedHash, expectedType, author string,
 ) (entity.UploadResult, error) {
+
+	_, err := u.retriever.GetByID(ctx, expectedHash)
+	if err == nil {
+		return entity.UploadResult{
+			Location: "",
+			Type:     "",
+			Size:     0,
+			Status:   http.StatusBadRequest,
+		}, errors.New("a blob with the same hash already exists")
+	}
+
 	result, err := u.minioUploader.UploadFile(ctx, body, fileSize, expectedHash, expectedType)
 	if err != nil {
 		return entity.UploadResult{
