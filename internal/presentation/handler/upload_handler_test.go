@@ -1,18 +1,31 @@
 package handler
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/nbd-wtf/go-nostr"
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"nos3/internal/domain/dto"
+	"nos3/internal/presentation"
+	"strconv"
 
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"net"
@@ -40,6 +53,7 @@ const (
 	mongoDBName   = "testdb"
 
 	redisImage = "redis:7-alpine"
+	SecretKey  = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 )
 
 type testServices struct {
@@ -275,5 +289,118 @@ func TestHandle_Integration(t *testing.T) {
 	e := echo.New()
 	e.Use(echoMiddleware.Logger())
 	e.POST("/", handler.Handle, middleware.AuthMiddleware("upload"))
+	testCases := []struct {
+		name           string
+		setupRequest   func() *http.Request
+		expectedStatus int
+		checkResponse  func(t *testing.T, resp *http.Response)
+	}{
+		{
+			name: "Valid upload request",
+			setupRequest: func() *http.Request {
+				content := []byte("test content")
 
+				hash := sha256.Sum256(content)
+				hexHash := hex.EncodeToString(hash[:])
+
+				bodyReader := io.NopCloser(bytes.NewReader(content))
+				req := httptest.NewRequest(http.MethodPost, "/", bodyReader)
+
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t,
+					600, "upload", hexHash))
+				req.Header.Set(presentation.TypeKey, "text/plain")
+
+				return req
+			},
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, resp *http.Response) {
+				var result dto.BlobDescriptor
+				err := json.NewDecoder(resp.Body).Decode(&result)
+				require.NoError(t, err)
+				assert.NotEmpty(t, result.URL)
+				assert.NotEmpty(t, result.Sha256)
+			},
+		},
+		{
+			name: "Large file upload (10MB)",
+			setupRequest: func() *http.Request {
+				content := bytes.Repeat([]byte("a"), 10*1024*1024)
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req.Header.Set(presentation.TypeKey, "text/plain")
+				return req
+			},
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, resp *http.Response) {
+				var result dto.BlobDescriptor
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+				assert.Equal(t, int64(10*1024*1024), result.Size)
+			},
+		},
+		{
+			name: "PDF file upload",
+			setupRequest: func() *http.Request {
+				content := append([]byte("%PDF-"), bytes.Repeat([]byte("a"), 1024)...)
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req.Header.Set(presentation.TypeKey, "application/pdf")
+				return req
+			},
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, resp *http.Response) {
+				var result dto.BlobDescriptor
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+				assert.Equal(t, "application/pdf", result.FileType)
+			},
+		},
+		{
+			name: "Image upload (PNG)",
+			setupRequest: func() *http.Request {
+				content := append([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}, bytes.Repeat([]byte("a"), 100)...)
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req.Header.Set(presentation.TypeKey, "image/png")
+				return req
+			},
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, resp *http.Response) {
+				var result dto.BlobDescriptor
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+				assert.Equal(t, "image/png", result.FileType)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := tc.setupRequest()
+			rec := httptest.NewRecorder()
+			e.ServeHTTP(rec, req)
+
+			assert.Equal(t, tc.expectedStatus, rec.Code)
+			if tc.checkResponse != nil {
+				tc.checkResponse(t, rec.Result())
+			}
+		})
+	}
+
+}
+
+func generateValidAuthHeader(t *testing.T, expirationOffset int64, action, hash string) string {
+	t.Helper()
+
+	event := nostr.Event{
+		Kind:      24242,
+		CreatedAt: nostr.Timestamp(time.Now().Unix() - 10),
+		Tags: nostr.Tags{
+			{presentation.ExpTag, strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
+			{presentation.TTag, action},
+			{presentation.XTag, hash},
+		},
+	}
+	_ = event.Sign(SecretKey)
+	eventBytes, _ := json.Marshal(event)
+	return "Nostr " + base64.StdEncoding.EncodeToString(eventBytes)
 }
