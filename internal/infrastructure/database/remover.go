@@ -15,6 +15,13 @@ type BlobRemover struct {
 	grpcClient grpcRepository.IClient
 }
 
+func NewRemover(db *Database, grpcClient grpcRepository.IClient) *BlobRemover {
+	return &BlobRemover{
+		db:         db,
+		grpcClient: grpcClient,
+	}
+}
+
 func (r *BlobRemover) RemoveByHash(ctx context.Context, hash string) error {
 	ctx, cancel := context.WithTimeout(ctx, r.db.QueryTimeout)
 	defer cancel()
