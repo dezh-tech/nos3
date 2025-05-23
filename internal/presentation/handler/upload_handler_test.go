@@ -372,6 +372,155 @@ func TestHandle_Integration(t *testing.T) {
 				assert.Equal(t, "image/png", result.FileType)
 			},
 		},
+		{
+			name: "Missing Authorization header",
+			setupRequest: func() *http.Request {
+				return httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte("test")))
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "Invalid Nostr prefix",
+			setupRequest: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte("test")))
+				req.Header.Set(presentation.AuthKey, "Bearer invalid")
+				return req
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "Expired event",
+			setupRequest: func() *http.Request {
+				content := []byte("test")
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, -600, "upload", hex.EncodeToString(hash[:])))
+				return req
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "Wrong action",
+			setupRequest: func() *http.Request {
+				content := []byte("test")
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "download", hex.EncodeToString(hash[:])))
+				return req
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "Invalid hash",
+			setupRequest: func() *http.Request {
+				content := []byte("test")
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", "invalidhash"))
+				return req
+			},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "Empty body",
+			setupRequest: func() *http.Request {
+				content := []byte("")
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				return req
+			},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "Wrong HTTP method (GET)",
+			setupRequest: func() *http.Request {
+				content := []byte("test")
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodGet, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				return req
+			},
+			expectedStatus: http.StatusMethodNotAllowed,
+		},
+		{
+			name: "Invalid Content-Type",
+			setupRequest: func() *http.Request {
+				content := []byte("test")
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req.Header.Set(presentation.TypeKey, "invalid/type")
+				return req
+			},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "Video upload (MP4)",
+			setupRequest: func() *http.Request {
+				content := append([]byte("\x00\x00\x00\x18ftypmp42"), bytes.Repeat([]byte("a"), 5*1024*1024)...)
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req.Header.Set(presentation.TypeKey, "video/mp4")
+				return req
+			},
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, resp *http.Response) {
+				var result dto.BlobDescriptor
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+				assert.Equal(t, "video/mp4", result.FileType)
+			},
+		},
+		{
+			name: "Compressed file (ZIP)",
+			setupRequest: func() *http.Request {
+				content := append([]byte("PK\x03\x04"), bytes.Repeat([]byte("a"), 1024)...)
+				hash := sha256.Sum256(content)
+				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req.Header.Set(presentation.TypeKey, "application/zip")
+				return req
+			},
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, resp *http.Response) {
+				var result dto.BlobDescriptor
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+				assert.Equal(t, "application/zip", result.FileType)
+			},
+		},
+		{
+			name: "Invalid JSON event",
+			setupRequest: func() *http.Request {
+				badJSON := base64.StdEncoding.EncodeToString([]byte(`{"invalid":`))
+				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte("test")))
+				req.Header.Set(presentation.AuthKey, "Nostr "+badJSON)
+				return req
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "Replay attack protection",
+			setupRequest: func() *http.Request {
+				content := []byte("test")
+				hash := sha256.Sum256(content)
+				authHeader := generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]))
+
+				req1 := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req1.Header.Set(presentation.AuthKey, authHeader)
+				req1.Header.Set(presentation.TypeKey, "text/plain")
+				rec1 := httptest.NewRecorder()
+				e.ServeHTTP(rec1, req1)
+				if rec1.Code != http.StatusOK {
+					t.Fatal("First request failed")
+				}
+
+				req2 := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req2.Header.Set(presentation.AuthKey, authHeader)
+				req2.Header.Set(presentation.TypeKey, "text/plain")
+				return req2
+			},
+			expectedStatus: http.StatusBadRequest,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
