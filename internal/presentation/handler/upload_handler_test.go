@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"github.com/labstack/echo/v4"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/redis/go-redis/v9"
@@ -12,8 +13,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
+
+	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"net"
+	"nos3/internal/application/usecase"
+	"nos3/internal/infrastructure/broker"
+	"nos3/internal/infrastructure/database"
+	"nos3/internal/infrastructure/grpcclient"
 	"nos3/internal/infrastructure/grpcclient/gen"
+	"nos3/internal/presentation/middleware"
+
+	minioInfra "nos3/internal/infrastructure/minio"
 	"testing"
 	"time"
 )
@@ -27,6 +37,7 @@ const (
 	mongoImage    = "mongo:latest"
 	mongoUser     = "testuser"
 	mongoPassword = "testpass"
+	mongoDBName   = "testdb"
 
 	redisImage = "redis:7-alpine"
 )
@@ -190,4 +201,79 @@ func (m *mockService) RegisterService(context.Context, *gen.RegisterServiceReque
 	return &gen.RegisterServiceResponse{
 		Success: true,
 	}, nil
+}
+
+func TestHandle_Integration(t *testing.T) {
+	services := setupServices(t)
+	defer cleanupServices(t, services)
+
+	addr, cleanup := startTestGRPCServer(t)
+	defer cleanup()
+	grpcClient, err := grpcclient.New(addr, grpcclient.Config{
+		Heartbeat: 30,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	redisClient, err := broker.NewClient(broker.Config{
+		URI:        "redis://" + services.redisClient.Options().Addr,
+		StreamName: "test-stream",
+		GroupName:  "test-group",
+	}, grpcClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	publisher := broker.NewPublisher(redisClient, broker.PublisherConfig{Timeout: 1000}, grpcClient)
+
+	mongoEndpoint, err := services.mongoC.Endpoint(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := database.Connect(database.Config{
+		URI:               fmt.Sprintf("mongodb://%s:%s@%s", mongoUser, mongoPassword, mongoEndpoint),
+		DBName:            mongoDBName,
+		ConnectionTimeout: 30000,
+		QueryTimeout:      30000,
+	}, grpcClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writer := database.NewBlobWriter(db, grpcClient)
+	retriever := database.NewBlobRetriever(db, grpcClient)
+	endpoint, err := services.minioC.Endpoint(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(minioUser, minioPassword, ""),
+		Secure: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	handler := &UploadHandler{
+		uploader: usecase.NewUploader(
+			publisher,
+			retriever,
+			writer,
+			minioInfra.NewUploader(minioClient, grpcClient, &minioInfra.UploaderConfig{
+				Timeout: 3000,
+				Bucket:  minioBucket,
+			}),
+			minioInfra.NewRemover(minioClient, grpcClient, &minioInfra.RemoverConfig{Timeout: 3000}),
+			database.NewRemover(db, grpcClient),
+			"http://localhost:8080",
+		),
+	}
+
+	e := echo.New()
+	e.Use(echoMiddleware.Logger())
+	e.POST("/", handler.Handle, middleware.AuthMiddleware("upload"))
+
 }
