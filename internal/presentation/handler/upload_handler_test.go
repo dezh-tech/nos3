@@ -6,10 +6,14 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"google.golang.org/grpc"
+	"net"
+	"nos3/internal/infrastructure/grpcclient/gen"
 	"testing"
 	"time"
 )
@@ -153,4 +157,37 @@ func cleanupServices(t *testing.T, s *testServices) {
 	if err := s.redisC.Terminate(ctx); err != nil {
 		t.Errorf("Failed to terminate Redis container: %v", err)
 	}
+}
+
+func startTestGRPCServer(t *testing.T) (addr string, cleanup func()) {
+	t.Helper()
+
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	server := grpc.NewServer()
+	gen.RegisterLogServer(server, &mockService{})
+	go func() {
+		require.NoError(t, server.Serve(lis))
+	}()
+	cleanup = func() {
+		server.GracefulStop()
+	}
+
+	return lis.Addr().String(), cleanup
+}
+
+type mockService struct {
+	gen.UnimplementedLogServer
+}
+
+func (m *mockService) AddLog(context.Context, *gen.AddLogRequest) (*gen.AddLogResponse, error) {
+	return &gen.AddLogResponse{
+		Success: true,
+	}, nil
+}
+
+func (m *mockService) RegisterService(context.Context, *gen.RegisterServiceRequest, ...grpc.CallOption) (*gen.RegisterServiceResponse, error) {
+	return &gen.RegisterServiceResponse{
+		Success: true,
+	}, nil
 }
