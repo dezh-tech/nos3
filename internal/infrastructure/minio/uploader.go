@@ -164,9 +164,9 @@ func (u *Uploader) validateFileSize(totalBytes, expectedSize int64) error {
 	return nil
 }
 
-func (u *Uploader) validateFileHash(calculatedHash, expectedHash string) error {
-	if calculatedHash != expectedHash {
-		return fmt.Errorf("invalid hash: got %s, expected %s", calculatedHash, expectedHash)
+func (u *Uploader) validateFileHash(calculatedHash, givenHash string) error {
+	if calculatedHash != givenHash {
+		return fmt.Errorf("invalid hash: got %s, expected %s", givenHash, calculatedHash)
 	}
 
 	return nil
