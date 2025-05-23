@@ -16,6 +16,14 @@ type Remover struct {
 	cfg         *RemoverConfig
 }
 
+func NewRemover(minioClient *minio.Client, grpcClient grpcRepository.IClient, cfg *RemoverConfig) *Remover {
+	return &Remover{
+		minioClient: minioClient,
+		grpcClient:  grpcClient,
+		cfg:         cfg,
+	}
+}
+
 func (r *Remover) Remove(ctx context.Context, bucketName, objectName string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.cfg.Timeout)*time.Millisecond)
 	defer cancel()
