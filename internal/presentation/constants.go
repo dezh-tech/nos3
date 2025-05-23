@@ -1,5 +1,9 @@
 package presentation
 
 const (
-	KeyTraceID = "t"
+	TTag    = "t"
+	AuthKey = "Authorization"
+	TypeKey = "Content-Type"
+	XTag    = "x"
+	ExpTag  = "expiration"
 )

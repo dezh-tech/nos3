@@ -15,10 +15,10 @@ import (
 	"github.com/nbd-wtf/go-nostr"
 )
 
-func authMiddleware(action string) echo.MiddlewareFunc {
+func AuthMiddleware(action string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			authHeader := ctx.Request().Header.Get("Authorization")
+			authHeader := ctx.Request().Header.Get(presentation.AuthKey)
 			if err := validateAuthHeader(authHeader); err != nil {
 				return ctx.String(http.StatusUnauthorized, err.Error())
 			}
@@ -33,8 +33,9 @@ func authMiddleware(action string) echo.MiddlewareFunc {
 			}
 
 			ctx.Set("pk", event.PubKey)
-			ctx.Set(presentation.KeyTraceID, getTagValue(event, presentation.KeyTraceID))
-			ctx.Set("expiration", getExpirationTime(event))
+			ctx.Set(presentation.XTag, getTagValue(event, presentation.XTag))
+			ctx.Set(presentation.TTag, getTagValue(event, presentation.TTag))
+			ctx.Set(presentation.ExpTag, getExpirationTime(event))
 
 			return next(ctx)
 		}
@@ -78,12 +79,12 @@ func validateEvent(event *nostr.Event, action string) error {
 		return fmt.Errorf("invalid created_at")
 	}
 
-	expiration := getTagValue(event, "expiration")
+	expiration := getTagValue(event, presentation.ExpTag)
 	if expiration == "" {
 		return fmt.Errorf("empty expiration tag")
 	}
 
-	t := getTagValue(event, presentation.KeyTraceID)
+	t := getTagValue(event, presentation.TTag)
 	if t == "" {
 		return fmt.Errorf("empty t tag")
 	}
@@ -91,7 +92,7 @@ func validateEvent(event *nostr.Event, action string) error {
 		return fmt.Errorf("invalid action")
 	}
 
-	x := getTagValue(event, "x")
+	x := getTagValue(event, presentation.XTag)
 	if action == "delete" && x == "" {
 		return fmt.Errorf("%s requires `x` tag", action)
 	}
@@ -114,7 +115,7 @@ func getTagValue(event *nostr.Event, tagName string) string {
 }
 
 func getExpirationTime(event *nostr.Event) int {
-	expiration := getTagValue(event, "expiration")
+	expiration := getTagValue(event, presentation.ExpTag)
 	expirationTime, _ := strconv.Atoi(expiration)
 
 	return expirationTime

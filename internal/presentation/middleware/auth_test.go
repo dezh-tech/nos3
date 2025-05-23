@@ -44,7 +44,7 @@ func TestAuthMiddleware(t *testing.T) {
 			name: "Wrong prefix",
 			setupRequest: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-				req.Header.Set("Authorization", "Bearer sometoken")
+				req.Header.Set(presentation.AuthKey, "Bearer sometoken")
 
 				return req
 			},
@@ -55,7 +55,7 @@ func TestAuthMiddleware(t *testing.T) {
 			name: "Invalid base64 event",
 			setupRequest: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-				req.Header.Set("Authorization", "Nostr invalid-base64")
+				req.Header.Set(presentation.AuthKey, "Nostr invalid-base64")
 
 				return req
 			},
@@ -67,7 +67,7 @@ func TestAuthMiddleware(t *testing.T) {
 			setupRequest: func() *http.Request {
 				badJSON := base64.StdEncoding.EncodeToString([]byte(`not a json`))
 				req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-				req.Header.Set("Authorization", "Nostr "+badJSON)
+				req.Header.Set(presentation.AuthKey, "Nostr "+badJSON)
 
 				return req
 			},
@@ -90,7 +90,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 				encoded := base64.StdEncoding.EncodeToString(eventBytes)
 				req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-				req.Header.Set("Authorization", "Nostr "+encoded)
+				req.Header.Set(presentation.AuthKey, "Nostr "+encoded)
 
 				return req
 			},
@@ -102,7 +102,7 @@ func TestAuthMiddleware(t *testing.T) {
 			setupRequest: func() *http.Request {
 				event := generateSignedEvent(t, 9999, "upload", 600)
 				req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-				req.Header.Set("Authorization", "Nostr "+event)
+				req.Header.Set(presentation.AuthKey, "Nostr "+event)
 
 				return req
 			},
@@ -114,7 +114,7 @@ func TestAuthMiddleware(t *testing.T) {
 			setupRequest: func() *http.Request {
 				event := generateSignedEventWithCreatedAt(t, 24242, "upload", 600, nostr.Timestamp(time.Now().Unix()+1000))
 				req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-				req.Header.Set("Authorization", "Nostr "+event)
+				req.Header.Set(presentation.AuthKey, "Nostr "+event)
 
 				return req
 			},
@@ -126,7 +126,7 @@ func TestAuthMiddleware(t *testing.T) {
 			setupRequest: func() *http.Request {
 				event := generateSignedEventWithoutTags(t, 24242)
 				req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-				req.Header.Set("Authorization", "Nostr "+event)
+				req.Header.Set(presentation.AuthKey, "Nostr "+event)
 
 				return req
 			},
@@ -138,7 +138,7 @@ func TestAuthMiddleware(t *testing.T) {
 			setupRequest: func() *http.Request {
 				event := generateSignedEvent(t, 24242, "upload", -10)
 				req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-				req.Header.Set("Authorization", "Nostr "+event)
+				req.Header.Set(presentation.AuthKey, "Nostr "+event)
 
 				return req
 			},
@@ -150,7 +150,7 @@ func TestAuthMiddleware(t *testing.T) {
 			setupRequest: func() *http.Request {
 				event := generateSignedEvent(t, 24242, "download", 600)
 				req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
-				req.Header.Set("Authorization", "Nostr "+event)
+				req.Header.Set(presentation.AuthKey, "Nostr "+event)
 
 				return req
 			},
@@ -162,7 +162,7 @@ func TestAuthMiddleware(t *testing.T) {
 			setupRequest: func() *http.Request {
 				event := generateSignedEventWithCorrectX(t, 24242, "upload", 600, strings.NewReader("Hello World!"))
 				req := httptest.NewRequest(http.MethodGet, "/", strings.NewReader("Hello World!"))
-				req.Header.Set("Authorization", "Nostr "+event)
+				req.Header.Set(presentation.AuthKey, "Nostr "+event)
 
 				return req
 			},
@@ -183,7 +183,7 @@ func TestAuthMiddleware(t *testing.T) {
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 
-			mw := authMiddleware("upload")(handler)
+			mw := AuthMiddleware("upload")(handler)
 			_ = mw(c)
 
 			assert.Equal(t, tt.expectedStatus, rec.Code)
@@ -198,9 +198,9 @@ func generateSignedEvent(t *testing.T, kind int, action string, expirationOffset
 		Kind:      kind,
 		CreatedAt: nostr.Timestamp(time.Now().Unix() - 10),
 		Tags: nostr.Tags{
-			{"expiration", strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
-			{presentation.KeyTraceID, action},
-			{"x", "file_id"},
+			{presentation.ExpTag, strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
+			{presentation.TTag, action},
+			{presentation.XTag, "file_id"},
 		},
 		Content: "",
 	}
@@ -227,9 +227,9 @@ func generateSignedEventWithCorrectX(t *testing.T, kind int, action string, expi
 		Kind:      kind,
 		CreatedAt: nostr.Timestamp(time.Now().Unix() - 10),
 		Tags: nostr.Tags{
-			{"expiration", strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
-			{presentation.KeyTraceID, action},
-			{"x", hexHash},
+			{presentation.ExpTag, strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
+			{presentation.TTag, action},
+			{presentation.XTag, hexHash},
 		},
 		Content: "",
 	}
@@ -249,9 +249,9 @@ func generateSignedEventWithCreatedAt(t *testing.T, kind int, action string, exp
 		Kind:      kind,
 		CreatedAt: timestamp,
 		Tags: nostr.Tags{
-			{"expiration", strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
-			{presentation.KeyTraceID, action},
-			{"x", "file_id"},
+			{presentation.ExpTag, strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
+			{presentation.TTag, action},
+			{presentation.XTag, "file_id"},
 		},
 		Content: "",
 	}
