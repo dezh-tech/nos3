@@ -8,6 +8,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -20,15 +28,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
-	"io"
-	"net/http"
-	"net/http/httptest"
+
 	"nos3/internal/domain/dto"
 	"nos3/internal/presentation"
-	"strconv"
 
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
-	"net"
+
 	"nos3/internal/application/usecase"
 	"nos3/internal/infrastructure/broker"
 	"nos3/internal/infrastructure/database"
@@ -37,8 +42,6 @@ import (
 	"nos3/internal/presentation/middleware"
 
 	minioInfra "nos3/internal/infrastructure/minio"
-	"testing"
-	"time"
 )
 
 const (
@@ -184,7 +187,7 @@ func cleanupServices(t *testing.T, s *testServices) {
 	}
 }
 
-func startTestGRPCServer(t *testing.T) (addr string, cleanup func()) {
+func startTestGRPCServer(t *testing.T) (string, func()) {
 	t.Helper()
 
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
@@ -194,7 +197,7 @@ func startTestGRPCServer(t *testing.T) (addr string, cleanup func()) {
 	go func() {
 		require.NoError(t, server.Serve(lis))
 	}()
-	cleanup = func() {
+	cleanup := func() {
 		server.GracefulStop()
 	}
 
@@ -314,6 +317,7 @@ func TestHandle_Integration(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, resp *http.Response) {
+				t.Helper()
 				var result dto.BlobDescriptor
 				err := json.NewDecoder(resp.Body).Decode(&result)
 				require.NoError(t, err)
@@ -329,10 +333,12 @@ func TestHandle_Integration(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
 				req.Header.Set(presentation.TypeKey, "text/plain")
+
 				return req
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, resp *http.Response) {
+				t.Helper()
 				var result dto.BlobDescriptor
 				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 				assert.Equal(t, int64(10*1024*1024), result.Size)
@@ -346,10 +352,12 @@ func TestHandle_Integration(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
 				req.Header.Set(presentation.TypeKey, "application/pdf")
+
 				return req
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, resp *http.Response) {
+				t.Helper()
 				var result dto.BlobDescriptor
 				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 				assert.Equal(t, "application/pdf", result.FileType)
@@ -363,10 +371,12 @@ func TestHandle_Integration(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
 				req.Header.Set(presentation.TypeKey, "image/png")
+
 				return req
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, resp *http.Response) {
+				t.Helper()
 				var result dto.BlobDescriptor
 				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 				assert.Equal(t, "image/png", result.FileType)
@@ -384,6 +394,7 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte("test")))
 				req.Header.Set(presentation.AuthKey, "Bearer invalid")
+
 				return req
 			},
 			expectedStatus: http.StatusUnauthorized,
@@ -395,6 +406,7 @@ func TestHandle_Integration(t *testing.T) {
 				hash := sha256.Sum256(content)
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, -600, "upload", hex.EncodeToString(hash[:])))
+
 				return req
 			},
 			expectedStatus: http.StatusUnauthorized,
@@ -406,6 +418,7 @@ func TestHandle_Integration(t *testing.T) {
 				hash := sha256.Sum256(content)
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "download", hex.EncodeToString(hash[:])))
+
 				return req
 			},
 			expectedStatus: http.StatusUnauthorized,
@@ -416,6 +429,7 @@ func TestHandle_Integration(t *testing.T) {
 				content := []byte("test")
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", "invalidhash"))
+
 				return req
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -427,6 +441,7 @@ func TestHandle_Integration(t *testing.T) {
 				hash := sha256.Sum256(content)
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+
 				return req
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -438,6 +453,7 @@ func TestHandle_Integration(t *testing.T) {
 				hash := sha256.Sum256(content)
 				req := httptest.NewRequest(http.MethodGet, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+
 				return req
 			},
 			expectedStatus: http.StatusMethodNotAllowed,
@@ -450,6 +466,7 @@ func TestHandle_Integration(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
 				req.Header.Set(presentation.TypeKey, "invalid/type")
+
 				return req
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -462,10 +479,12 @@ func TestHandle_Integration(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
 				req.Header.Set(presentation.TypeKey, "video/mp4")
+
 				return req
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, resp *http.Response) {
+				t.Helper()
 				var result dto.BlobDescriptor
 				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 				assert.Equal(t, "video/mp4", result.FileType)
@@ -479,10 +498,12 @@ func TestHandle_Integration(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
 				req.Header.Set(presentation.TypeKey, "application/zip")
+
 				return req
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, resp *http.Response) {
+				t.Helper()
 				var result dto.BlobDescriptor
 				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 				assert.Equal(t, "application/zip", result.FileType)
@@ -494,6 +515,7 @@ func TestHandle_Integration(t *testing.T) {
 				badJSON := base64.StdEncoding.EncodeToString([]byte(`{"invalid":`))
 				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte("test")))
 				req.Header.Set(presentation.AuthKey, "Nostr "+badJSON)
+
 				return req
 			},
 			expectedStatus: http.StatusUnauthorized,
@@ -517,6 +539,7 @@ func TestHandle_Integration(t *testing.T) {
 				req2 := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
 				req2.Header.Set(presentation.AuthKey, authHeader)
 				req2.Header.Set(presentation.TypeKey, "text/plain")
+
 				return req2
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -534,7 +557,6 @@ func TestHandle_Integration(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func generateValidAuthHeader(t *testing.T, expirationOffset int64, action, hash string) string {
@@ -550,6 +572,10 @@ func generateValidAuthHeader(t *testing.T, expirationOffset int64, action, hash 
 		},
 	}
 	_ = event.Sign(SecretKey)
-	eventBytes, _ := json.Marshal(event)
+	eventBytes, err := json.Marshal(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	return "Nostr " + base64.StdEncoding.EncodeToString(eventBytes)
 }

@@ -43,7 +43,6 @@ func NewUploader(publisher broker.Publisher, retriever database.Retriever, write
 func (u *Uploader) Upload(ctx context.Context, body io.ReadCloser, fileSize int64,
 	expectedHash, expectedType, author string,
 ) (entity.UploadResult, error) {
-
 	_, err := u.retriever.GetByID(ctx, expectedHash)
 	if err == nil {
 		return entity.UploadResult{
