@@ -119,7 +119,7 @@ func (u *Uploader) processFileChunks(ctx context.Context, body io.ReadCloser, bu
 			if err != nil {
 				u.logInternalError(ctx, "failed to upload chunk", fmt.Sprintf("chunk: %s, error: %v", chunkName, err))
 
-				return "", 0, errors.New("chunk upload failed")
+				return "", 0, fmt.Errorf("chunk upload failed: %w", err)
 			}
 
 			totalBytes += int64(len(chunk))
