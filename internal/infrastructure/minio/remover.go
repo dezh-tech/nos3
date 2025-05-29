@@ -13,10 +13,10 @@ import (
 type Remover struct {
 	minioClient *minio.Client
 	grpcClient  grpcRepository.IClient
-	cfg         *RemoverConfig
+	cfg         RemoverConfig
 }
 
-func NewRemover(minioClient *minio.Client, grpcClient grpcRepository.IClient, cfg *RemoverConfig) *Remover {
+func NewRemover(minioClient *minio.Client, grpcClient grpcRepository.IClient, cfg RemoverConfig) *Remover {
 	return &Remover{
 		minioClient: minioClient,
 		grpcClient:  grpcClient,

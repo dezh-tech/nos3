@@ -226,7 +226,8 @@ func TestHandle_Integration(t *testing.T) {
 
 	addr, cleanup := startTestGRPCServer(t)
 	defer cleanup()
-	grpcClient, err := grpcclient.New(addr, grpcclient.Config{
+	grpcClient, err := grpcclient.New(grpcclient.ClientConfig{
+		Endpoint:  addr,
 		Heartbeat: 30,
 	})
 	if err != nil {
@@ -273,21 +274,18 @@ func TestHandle_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	handler := &UploadHandler{
-		uploader: usecase.NewUploader(
-			publisher,
-			retriever,
-			writer,
-			minioInfra.NewUploader(minioClient, grpcClient, &minioInfra.UploaderConfig{
-				Timeout: 3000,
-				Bucket:  minioBucket,
-			}),
-			minioInfra.NewRemover(minioClient, grpcClient, &minioInfra.RemoverConfig{Timeout: 3000}),
-			database.NewRemover(db, grpcClient),
-			"http://localhost:8080",
-		),
-	}
+	handler := NewUploadHandler(usecase.NewUploader(
+		publisher,
+		retriever,
+		writer,
+		minioInfra.NewUploader(minioClient, grpcClient, minioInfra.UploaderConfig{
+			Timeout: 3000,
+			Bucket:  minioBucket,
+		}),
+		minioInfra.NewRemover(minioClient, grpcClient, minioInfra.RemoverConfig{Timeout: 3000}),
+		database.NewRemover(db, grpcClient),
+		"http://localhost:8080",
+	))
 
 	e := echo.New()
 	e.Use(echoMiddleware.Logger())

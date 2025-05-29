@@ -16,6 +16,12 @@ type UploadHandler struct {
 	uploader abstraction.Uploader
 }
 
+func NewUploadHandler(uploader abstraction.Uploader) *UploadHandler {
+	return &UploadHandler{
+		uploader: uploader,
+	}
+}
+
 func (h *UploadHandler) Handle(c echo.Context) error {
 	body := c.Request().Body
 	contentType := c.Request().Header.Get(presentation.TypeKey)

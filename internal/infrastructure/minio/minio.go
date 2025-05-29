@@ -15,7 +15,7 @@ type Client struct {
 	GrpcClient  grpcRepository.IClient
 }
 
-func New(cfg *ClientConfig, grpcClient grpcRepository.IClient) (*Client, error) {
+func New(cfg ClientConfig, grpcClient grpcRepository.IClient) (*Client, error) {
 	logger.Info("connecting to minio")
 
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
