@@ -4,9 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
-	"net/http"
+
 	"nos3"
 	"nos3/config"
 	"nos3/internal/application/usecase"
@@ -17,10 +23,6 @@ import (
 	"nos3/internal/presentation/handler"
 	"nos3/internal/presentation/middleware"
 	"nos3/pkg/logger"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 func HandleRun(args []string) {
@@ -97,7 +99,7 @@ func HandleRun(args []string) {
 	defer stop()
 
 	go func() {
-		if err := e.Start(cfg.Default.Address); err != nil && err != http.ErrServerClosed {
+		if err := e.Start(cfg.Default.Address); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			ExitOnError(fmt.Errorf("shutting down server: %w", err))
 		}
 	}()
@@ -108,5 +110,4 @@ func HandleRun(args []string) {
 	if err := e.Shutdown(ctx); err != nil {
 		ExitOnError(err)
 	}
-
 }

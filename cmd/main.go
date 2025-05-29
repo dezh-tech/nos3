@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"nos3"
 	"nos3/cmd/commands"
-	"os"
 )
 
 func main() {
@@ -29,5 +30,4 @@ func main() {
 	default:
 		commands.HandleHelp(os.Args)
 	}
-
 }
