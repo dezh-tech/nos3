@@ -226,7 +226,8 @@ func TestHandle_Integration(t *testing.T) {
 
 	addr, cleanup := startTestGRPCServer(t)
 	defer cleanup()
-	grpcClient, err := grpcclient.New(addr, grpcclient.Config{
+	grpcClient, err := grpcclient.New(grpcclient.ClientConfig{
+		Endpoint:  addr,
 		Heartbeat: 30,
 	})
 	if err != nil {

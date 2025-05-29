@@ -17,16 +17,17 @@ import (
 
 // Config represents the configs used by services on system.
 type Config struct {
-	Default         internal.DefaultConfig `yaml:"default"`
-	Environment     string                 `yaml:"environment"`
-	MinIOClient     minio.ClientConfig     `yaml:"minio_client"`
-	MinIOUploader   minio.UploaderConfig   `yaml:"minio_uploader"`
-	MinIORemover    minio.RemoverConfig    `yaml:"minio_remover"`
-	DBConfig        database.Config        `yaml:"db_config"`
-	BrokerConfig    broker.Config          `yaml:"redis_broker_config"`
-	PublisherConfig broker.PublisherConfig `yaml:"publisher_config"`
-	GRPCClient      grpcclient.Config      `yaml:"manager"`
-	Logger          logger.Config          `yaml:"logger"`
+	Default         internal.DefaultConfig  `yaml:"default"`
+	Environment     string                  `yaml:"environment"`
+	MinIOClient     minio.ClientConfig      `yaml:"minio_client"`
+	MinIOUploader   minio.UploaderConfig    `yaml:"minio_uploader"`
+	MinIORemover    minio.RemoverConfig     `yaml:"minio_remover"`
+	DBConfig        database.Config         `yaml:"db_config"`
+	BrokerConfig    broker.Config           `yaml:"redis_broker_config"`
+	PublisherConfig broker.PublisherConfig  `yaml:"publisher_config"`
+	GRPCClient      grpcclient.ClientConfig `yaml:"manager"`
+	GRPCServer      grpcclient.ServerConfig `yaml:"grpc_server"`
+	Logger          logger.Config           `yaml:"logger"`
 }
 
 func Load(path string) (*Config, error) {

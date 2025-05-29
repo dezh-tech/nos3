@@ -12,12 +12,12 @@ import (
 type Client struct {
 	RegistryService mpb.ServiceRegistryClient
 	LogService      mpb.LogClient
-	config          Config
+	config          ClientConfig
 	conn            *grpc.ClientConn
 }
 
-func New(endpoint string, cfg Config) (*Client, error) {
-	conn, err := grpc.NewClient(endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func New(cfg ClientConfig) (*Client, error) {
+	conn, err := grpc.NewClient(cfg.Endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}

@@ -122,7 +122,7 @@ func TestUploadFile(t *testing.T) {
 		_ = container.Terminate(context.Background())
 	})
 
-	uploader := NewUploader(client, &MockGRPC{}, &UploaderConfig{
+	uploader := NewUploader(client, &MockGRPC{}, UploaderConfig{
 		Timeout: 3000,
 		Bucket:  BucketName,
 	})

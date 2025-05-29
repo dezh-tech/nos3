@@ -25,10 +25,10 @@ import (
 type Uploader struct {
 	minioClient *minio.Client
 	grpcClient  grpcRepository.IClient
-	cfg         *UploaderConfig
+	cfg         UploaderConfig
 }
 
-func NewUploader(minioClient *minio.Client, grpcClient grpcRepository.IClient, config *UploaderConfig) *Uploader {
+func NewUploader(minioClient *minio.Client, grpcClient grpcRepository.IClient, config UploaderConfig) *Uploader {
 	return &Uploader{
 		minioClient: minioClient,
 		grpcClient:  grpcClient,

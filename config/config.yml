@@ -9,7 +9,7 @@ environment: "prod"
 
 # default specifies default settings for app
 default:
-  address: "localhost:5000"
+  address: "localhost:3020"
 
 # minio_client specifies settings for the MinIO instance.
 minio_client:
@@ -27,6 +27,18 @@ minio_uploader:
 minio_remover:
   # timeout_in_ms defines the maximum duration (in milliseconds) for requests to the MinIO API.
   timeout_in_ms: 5000
+
+
+
+# grpc_server contains information about grpc server.
+grpc_server:
+  # bind is the IP address to be bind and listen on.
+  # default is local host.
+  bind: "localhost"
+
+  # port is grpc port to be listen on.
+  # default is 50051.
+  port: 50051
 
 
 # db_config specifies settings for database
@@ -63,7 +75,7 @@ publisher_config:
 manager:
   # IP address of manager instance.
   # default is local network manager:8888.
-  endpoint: "manager:8888"
+  endpoint: "localhost:50051"
 
   # duration for manager to ping this relay.
   # default is 1 minute.
