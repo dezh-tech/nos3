@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"nos3/internal/presentation"
+
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 
@@ -80,13 +82,20 @@ func HandleRun(args []string) {
 	uploader := usecase.NewUploader(brokerPublisher, dbRetriever, dbWriter, minIOUploader,
 		minIORemover, dbRemover, cfg.Default.Address)
 
+	getter := usecase.NewGetter(dbRetriever)
+
 	uploadHandler := handler.NewUploadHandler(uploader)
+	getHandler := handler.NewGetHandler(getter)
+	headHandler := handler.NewHeadHandler(getter)
+
 	e := echo.New()
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowHeaders: []string{echo.HeaderAuthorization, echo.HeaderContentType, echo.HeaderContentLength},
-		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost,
-			http.MethodDelete, http.MethodHead, http.MethodOptions},
+		AllowMethods: []string{
+			http.MethodGet, http.MethodPut, http.MethodPost,
+			http.MethodDelete, http.MethodHead, http.MethodOptions,
+		},
 		MaxAge: 86400,
 	}))
 	e.Use(echoMiddleware.Logger())
@@ -100,6 +109,10 @@ func HandleRun(args []string) {
 	})
 
 	e.POST("/upload", uploadHandler.Handle, middleware.AuthMiddleware("upload"))
+	e.GET(fmt.Sprintf("/:%s", presentation.Sha256Param), getHandler.HandleGet,
+		middleware.AuthMiddleware("get"), middleware.AuthGetMiddleware())
+	e.HEAD(fmt.Sprintf("/:%s", presentation.Sha256Param), headHandler.HandleHead,
+		middleware.AuthMiddleware("head"))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
