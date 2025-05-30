@@ -98,11 +98,6 @@ func validateEvent(event *nostr.Event, action string) error {
 		return fmt.Errorf("invalid action")
 	}
 
-	x := getTagValue(event, presentation.XTag)
-	if action == "delete" && x == "" {
-		return fmt.Errorf("%s requires `x` tag", action)
-	}
-
 	expirationTime, err := strconv.Atoi(expiration)
 	if err != nil || time.Unix(int64(expirationTime), 0).Unix() < time.Now().Unix() {
 		return fmt.Errorf("invalid expiration")
