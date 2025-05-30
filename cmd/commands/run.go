@@ -82,7 +82,13 @@ func HandleRun(args []string) {
 
 	uploadHandler := handler.NewUploadHandler(uploader)
 	e := echo.New()
-	e.Use(echoMiddleware.CORS())
+	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowHeaders: []string{echo.HeaderAuthorization, echo.HeaderContentType, echo.HeaderContentLength},
+		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost,
+			http.MethodDelete, http.MethodHead, http.MethodOptions},
+		MaxAge: 86400,
+	}))
 	e.Use(echoMiddleware.Logger())
 	e.Use(echoMiddleware.Recover())
 	e.Use(echoMiddleware.Secure())
