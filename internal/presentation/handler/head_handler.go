@@ -26,7 +26,7 @@ func NewHeadHandler(getter abstraction.Getter) *HeadHandler {
 func (h *HeadHandler) HandleHead(c echo.Context) error {
 	sha256 := c.Param(presentation.Sha256Param)
 	if sha256 == "" {
-		c.Response().Header().Set("X-Reason", "missing sha256 hash")
+		c.Response().Header().Set(presentation.ReasonTag, "missing sha256 hash")
 
 		return c.NoContent(http.StatusBadRequest)
 	}
@@ -35,7 +35,7 @@ func (h *HeadHandler) HandleHead(c echo.Context) error {
 
 	blob, err := h.getter.GetBlob(c.Request().Context(), sha256)
 	if err != nil {
-		c.Response().Header().Set("X-Reason", err.Error())
+		c.Response().Header().Set(presentation.ReasonTag, err.Error())
 
 		return c.NoContent(http.StatusNotFound)
 	}

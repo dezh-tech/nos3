@@ -20,20 +20,20 @@ func AuthMiddleware(action string) echo.MiddlewareFunc {
 		return func(ctx echo.Context) error {
 			authHeader := ctx.Request().Header.Get(presentation.AuthKey)
 			if err := validateAuthHeader(authHeader); err != nil {
-				ctx.Response().Header().Set("X-Reason", err.Error())
+				ctx.Response().Header().Set(presentation.ReasonTag, err.Error())
 
 				return ctx.NoContent(http.StatusUnauthorized)
 			}
 
 			event, err := decodeEvent(authHeader)
 			if err != nil {
-				ctx.Response().Header().Set("X-Reason", err.Error())
+				ctx.Response().Header().Set(presentation.ReasonTag, err.Error())
 
 				return ctx.NoContent(http.StatusUnauthorized)
 			}
 
 			if err := validateEvent(event, action); err != nil {
-				ctx.Response().Header().Set("X-Reason", err.Error())
+				ctx.Response().Header().Set(presentation.ReasonTag, err.Error())
 
 				return ctx.NoContent(http.StatusUnauthorized)
 			}

@@ -21,13 +21,13 @@ func AuthGetMiddleware() echo.MiddlewareFunc {
 
 			event, err := decodeEvent(authHeader)
 			if err != nil {
-				ctx.Response().Header().Set("X-Reason", err.Error())
+				ctx.Response().Header().Set(presentation.ReasonTag, err.Error())
 
 				return ctx.NoContent(http.StatusUnauthorized)
 			}
 
 			if err := validateGetEvent(event, providedHash, url); err != nil {
-				ctx.Response().Header().Set("X-Reason", err.Error())
+				ctx.Response().Header().Set(presentation.ReasonTag, err.Error())
 
 				return ctx.NoContent(http.StatusUnauthorized)
 			}

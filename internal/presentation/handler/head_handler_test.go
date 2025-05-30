@@ -146,7 +146,7 @@ func TestHandleHead_Integration(t *testing.T) {
 				_ string,
 			) {
 				t.Helper()
-				assert.Equal(t, "blob not found", resp.Header.Get("X-Reason"))
+				assert.Equal(t, "blob not found", resp.Header.Get(presentation.ReasonTag))
 			},
 		},
 		{
@@ -207,7 +207,7 @@ func TestHandleHead_Integration(t *testing.T) {
 				_ string,
 			) {
 				t.Helper()
-				assert.Equal(t, "invalid expiration", resp.Header.Get("X-Reason"))
+				assert.Equal(t, "invalid expiration", resp.Header.Get(presentation.ReasonTag))
 			},
 		},
 	}

@@ -9,4 +9,5 @@ const (
 	PK          = "pk"
 	Sha256Param = "sha256"
 	ServerTag   = "server"
+	ReasonTag   = "X-Reason"
 )

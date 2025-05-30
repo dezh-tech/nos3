@@ -146,7 +146,7 @@ func TestHandleGet_Integration(t *testing.T) {
 			expectedStatus: http.StatusNotFound,
 			checkResponse: func(t *testing.T, resp *http.Response, _ int64, _ string, _ string) {
 				t.Helper()
-				assert.Equal(t, "blob not found", resp.Header.Get("X-Reason"))
+				assert.Equal(t, "blob not found", resp.Header.Get(presentation.ReasonTag))
 			},
 		},
 		{
@@ -204,7 +204,7 @@ func TestHandleGet_Integration(t *testing.T) {
 			expectedStatus: http.StatusUnauthorized,
 			checkResponse: func(t *testing.T, resp *http.Response, _ int64, _ string, _ string) {
 				t.Helper()
-				assert.Equal(t, "invalid expiration", resp.Header.Get("X-Reason"))
+				assert.Equal(t, "invalid expiration", resp.Header.Get(presentation.ReasonTag))
 			},
 		},
 		{
@@ -221,7 +221,7 @@ func TestHandleGet_Integration(t *testing.T) {
 			expectedStatus: http.StatusUnauthorized,
 			checkResponse: func(t *testing.T, resp *http.Response, _ int64, _ string, _ string) {
 				t.Helper()
-				assert.Equal(t, "invalid action", resp.Header.Get("X-Reason"))
+				assert.Equal(t, "invalid action", resp.Header.Get(presentation.ReasonTag))
 			},
 		},
 	}

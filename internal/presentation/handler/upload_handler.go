@@ -32,7 +32,7 @@ func (h *UploadHandler) Handle(c echo.Context) error {
 
 	result, err := h.uploader.Upload(c.Request().Context(), body, contentSize, hash, contentType, author)
 	if err != nil {
-		c.Response().Header().Set("X-Reason", err.Error())
+		c.Response().Header().Set(presentation.ReasonTag, err.Error())
 
 		return c.JSON(result.Status, map[string]string{
 			"error": err.Error(),
