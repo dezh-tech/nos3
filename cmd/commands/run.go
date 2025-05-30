@@ -99,7 +99,7 @@ func HandleRun(args []string) {
 		return c.String(200, "OK")
 	})
 
-	e.POST("/", uploadHandler.Handle, middleware.AuthMiddleware("upload"))
+	e.POST("/upload", uploadHandler.Handle, middleware.AuthMiddleware("upload"))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
