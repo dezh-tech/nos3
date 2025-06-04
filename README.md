@@ -21,7 +21,6 @@ Here is a list of supported BUDs:
 
 - [ ] BUD-01: Server requirements and blob retrieval
 - [ ] BUD-02: Blob upload and management
-- [ ] BUD-03: User Server List
 - [ ] BUD-04: Mirroring blobs
 - [ ] BUD-05: Media optimization
 - [ ] BUD-06: Upload requirements
@@ -31,7 +30,7 @@ Here is a list of supported BUDs:
 
 ## Features
 
-- [ ] Hosting blobs using S3, not disk storage
+- [X] Hosting blobs using S3, not disk storage
 - [ ] Blob Compression and Size processing(?)
 - [ ] Object detection and CASM reporting
 - [ ] Malware detection
