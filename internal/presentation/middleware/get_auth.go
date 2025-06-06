@@ -12,6 +12,8 @@ import (
 	"nos3/internal/presentation"
 )
 
+var sha256Regex = regexp.MustCompile(`^[a-fA-F0-9]{64}$`)
+
 func AuthGetMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
@@ -54,7 +56,6 @@ func validateGetEvent(event *nostr.Event, providedHash, url string) error {
 
 func validateSHA256(sha256 string) bool {
 	sha256 = removeFileExtension(sha256)
-	sha256Regex := regexp.MustCompile(`^[a-fA-F0-9]{64}$`)
 
 	return sha256Regex.MatchString(sha256)
 }

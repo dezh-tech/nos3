@@ -12,6 +12,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+var sha256Regex = regexp.MustCompile(`^[a-fA-F0-9]{64}$`)
+
 type HeadHandler struct {
 	getter abstraction.Getter
 }
@@ -59,7 +61,6 @@ func removeFileExtension(sha256 string) string {
 }
 
 func validateSHA256(sha256 string) bool {
-	sha256Regex := regexp.MustCompile(`^[a-fA-F0-9]{64}$`)
 
 	return sha256Regex.MatchString(sha256)
 }

@@ -26,7 +26,7 @@ func (h *GetHandler) HandleGet(c echo.Context) error {
 	if sha256 == "" {
 		c.Response().Header().Set(presentation.ReasonTag, "missing sha256 hash")
 
-		return c.String(http.StatusBadRequest, "missing sha256 hash")
+		return c.NoContent(http.StatusBadRequest)
 	}
 
 	sha256 = removeFileExtension(sha256)
