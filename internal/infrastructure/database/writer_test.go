@@ -75,7 +75,7 @@ func setupMongo(t *testing.T) (string, func()) {
 func TestWrite(t *testing.T) {
 	t.Parallel()
 	uri, clenUp := setupMongo(t)
-	defer clenUp()
+	t.Cleanup(clenUp)
 
 	db, err := Connect(Config{
 		URI:               uri,

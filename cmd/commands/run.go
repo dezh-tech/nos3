@@ -60,6 +60,7 @@ func HandleRun(args []string) {
 	if err != nil {
 		ExitOnError(err)
 	}
+	defer brokerClient.Close()
 
 	brokerPublisher := broker.NewPublisher(brokerClient, cfg.PublisherConfig, grpcClient)
 

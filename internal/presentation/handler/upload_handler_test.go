@@ -243,6 +243,7 @@ func TestHandle_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer redisClient.Close()
 
 	publisher := broker.NewPublisher(redisClient, broker.PublisherConfig{Timeout: 1000}, grpcClient)
 
