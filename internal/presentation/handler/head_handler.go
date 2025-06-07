@@ -61,6 +61,5 @@ func removeFileExtension(sha256 string) string {
 }
 
 func validateSHA256(sha256 string) bool {
-
 	return sha256Regex.MatchString(sha256)
 }
