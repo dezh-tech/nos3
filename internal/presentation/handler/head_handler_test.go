@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"nos3/pkg/logger"
 	"testing"
 	"time"
 
@@ -48,6 +49,12 @@ func TestHandleHead_Integration(t *testing.T) {
 		QueryTimeout:      30000,
 	}, grpcClient)
 	require.NoError(t, err)
+	defer func(db *database.Database) {
+		err := db.Stop()
+		if err != nil {
+			logger.Error("couldn't stop db instance")
+		}
+	}(db)
 
 	retriever := database.NewBlobRetriever(db, grpcClient)
 	minioEndpoint, err := services.minioC.Endpoint(context.Background(), "")

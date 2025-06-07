@@ -68,10 +68,17 @@ func HandleRun(args []string) {
 		ExitOnError(err)
 	}
 
+	defer func(db *database.Database) {
+		err := db.Stop()
+		if err != nil {
+			logger.Error("couldn't stop db instance")
+		}
+	}(db)
+
 	dbRemover := database.NewRemover(db, grpcClient)
 	dbRetriever := database.NewBlobRetriever(db, grpcClient)
 	dbWriter := database.NewBlobWriter(db, grpcClient)
-	dbLister := database.NewBlobLister(db, grpcClient) // New: Initialize BlobLister
+	dbLister := database.NewBlobLister(db, grpcClient)
 
 	minIOClient, err := minio.New(cfg.MinIOClient, grpcClient)
 	if err != nil {

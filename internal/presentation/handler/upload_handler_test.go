@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"nos3/pkg/logger"
 	"strconv"
 	"testing"
 	"time"
@@ -259,6 +260,12 @@ func TestHandle_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func(db *database.Database) {
+		err := db.Stop()
+		if err != nil {
+			logger.Error("couldn't stop db instance")
+		}
+	}(db)
 
 	writer := database.NewBlobWriter(db, grpcClient)
 	retriever := database.NewBlobRetriever(db, grpcClient)

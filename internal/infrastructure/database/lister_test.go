@@ -91,7 +91,8 @@ func TestGetByAuthor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			uri := setupMongo(t)
+			uri, cleanUp := setupMongo(t)
+			defer cleanUp()
 
 			mockGrpcClient := &MockGRPC{}
 			mockGrpcClient.On("AddLog", mock.Anything, mock.Anything, mock.Anything).Return(&gen.AddLogResponse{Success: true}, nil).Maybe()
@@ -106,7 +107,7 @@ func TestGetByAuthor(t *testing.T) {
 			defer func(db *Database) {
 				err := db.Stop()
 				if err != nil {
-					logger.Info("couldn't stop the db connection")
+					logger.Error("couldn't stop the db connection")
 				}
 			}(db)
 
