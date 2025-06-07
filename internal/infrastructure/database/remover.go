@@ -27,7 +27,7 @@ func (r *BlobRemover) RemoveByHash(ctx context.Context, hash string) error {
 	defer cancel()
 
 	coll := r.db.Client.Database(r.db.DBName).Collection(BlobCollection)
-	_, err := coll.DeleteOne(ctx, bson.M{"hash": hash}, &options.DeleteOptions{})
+	_, err := coll.DeleteOne(ctx, bson.M{"_id": hash}, &options.DeleteOptions{})
 	if err != nil {
 		if _, logErr := r.grpcClient.AddLog(ctx, "failed to remove blob", err.Error()); logErr != nil {
 			logger.Error("can't send log to manager", "err", logErr)
