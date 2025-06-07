@@ -71,6 +71,7 @@ func HandleRun(args []string) {
 	dbRemover := database.NewRemover(db, grpcClient)
 	dbRetriever := database.NewBlobRetriever(db, grpcClient)
 	dbWriter := database.NewBlobWriter(db, grpcClient)
+	dbLister := database.NewBlobLister(db, grpcClient) // New: Initialize BlobLister
 
 	minIOClient, err := minio.New(cfg.MinIOClient, grpcClient)
 	if err != nil {
@@ -83,10 +84,14 @@ func HandleRun(args []string) {
 		minIORemover, dbRemover, cfg.Default.Address)
 
 	getter := usecase.NewGetter(dbRetriever)
+	lister := usecase.NewLister(dbLister, cfg.Default.Address)
+	deleter := usecase.NewDeleter(dbRetriever, dbRemover, minIORemover)
 
 	uploadHandler := handler.NewUploadHandler(uploader)
 	getHandler := handler.NewGetHandler(getter)
 	headHandler := handler.NewHeadHandler(getter)
+	listHandler := handler.NewListHandler(lister)
+	deleteHandler := handler.NewDeleteHandler(deleter)
 
 	e := echo.New()
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
@@ -113,6 +118,10 @@ func HandleRun(args []string) {
 		middleware.AuthMiddleware("get"), middleware.AuthGetMiddleware())
 	e.HEAD(fmt.Sprintf("/:%s", presentation.Sha256Param), headHandler.HandleHead,
 		middleware.AuthMiddleware("head"))
+	e.GET(fmt.Sprintf("/list/:%s", presentation.PK), listHandler.HandleList,
+		middleware.AuthMiddleware("list"))
+	e.DELETE(fmt.Sprintf("/:%s", presentation.Sha256Param), deleteHandler.HandleDelete,
+		middleware.AuthMiddleware("delete"), middleware.AuthDeleteMiddleware())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
