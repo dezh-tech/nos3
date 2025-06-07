@@ -27,7 +27,8 @@ func (m *MockGRPC) AddLog(_ context.Context, _, _ string) (*gen.AddLogResponse, 
 
 func TestRetrieve(t *testing.T) {
 	t.Parallel()
-	uri := setupMongo(t)
+	uri, cleanUp := setupMongo(t)
+	defer cleanUp()
 
 	db, err := Connect(Config{
 		URI:               uri,

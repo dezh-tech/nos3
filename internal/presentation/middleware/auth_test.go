@@ -167,7 +167,7 @@ func TestAuthMiddleware(t *testing.T) {
 				return req
 			},
 			expectedStatus:  http.StatusOK,
-			expectedMessage: "success",
+			expectedMessage: "",
 		},
 	}
 
@@ -187,7 +187,7 @@ func TestAuthMiddleware(t *testing.T) {
 			_ = mw(c)
 
 			assert.Equal(t, tt.expectedStatus, rec.Code)
-			assert.Contains(t, rec.Body.String(), tt.expectedMessage)
+			assert.Contains(t, rec.Header().Get(presentation.ReasonTag), tt.expectedMessage)
 		})
 	}
 }

@@ -20,16 +20,22 @@ func AuthMiddleware(action string) echo.MiddlewareFunc {
 		return func(ctx echo.Context) error {
 			authHeader := ctx.Request().Header.Get(presentation.AuthKey)
 			if err := validateAuthHeader(authHeader); err != nil {
-				return ctx.String(http.StatusUnauthorized, err.Error())
+				ctx.Response().Header().Set(presentation.ReasonTag, err.Error())
+
+				return ctx.NoContent(http.StatusUnauthorized)
 			}
 
 			event, err := decodeEvent(authHeader)
 			if err != nil {
-				return ctx.String(http.StatusUnauthorized, err.Error())
+				ctx.Response().Header().Set(presentation.ReasonTag, err.Error())
+
+				return ctx.NoContent(http.StatusUnauthorized)
 			}
 
 			if err := validateEvent(event, action); err != nil {
-				return ctx.String(http.StatusUnauthorized, err.Error())
+				ctx.Response().Header().Set(presentation.ReasonTag, err.Error())
+
+				return ctx.NoContent(http.StatusUnauthorized)
 			}
 
 			ctx.Set(presentation.PK, event.PubKey)
@@ -90,11 +96,6 @@ func validateEvent(event *nostr.Event, action string) error {
 	}
 	if t != action {
 		return fmt.Errorf("invalid action")
-	}
-
-	x := getTagValue(event, presentation.XTag)
-	if action == "delete" && x == "" {
-		return fmt.Errorf("%s requires `x` tag", action)
 	}
 
 	expirationTime, err := strconv.Atoi(expiration)
