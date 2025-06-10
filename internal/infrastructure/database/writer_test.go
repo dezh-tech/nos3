@@ -22,7 +22,7 @@ const (
 	TestDBName   = "testdb"
 )
 
-func setupMongo(t *testing.T) string {
+func setupMongo(t *testing.T) (string, func()) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -67,12 +67,15 @@ func setupMongo(t *testing.T) string {
 		t.Fatal("Failed to ping MongoDB:", err)
 	}
 
-	return uri
+	return uri, func() {
+		_ = container.Terminate(ctx)
+	}
 }
 
 func TestWrite(t *testing.T) {
 	t.Parallel()
-	uri := setupMongo(t)
+	uri, clenUp := setupMongo(t)
+	t.Cleanup(clenUp)
 
 	db, err := Connect(Config{
 		URI:               uri,

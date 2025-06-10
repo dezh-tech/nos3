@@ -14,6 +14,7 @@ import (
 	"nos3/internal/domain/repository/database"
 	"nos3/internal/domain/repository/minio"
 	"nos3/pkg/logger"
+	"nos3/pkg/utils"
 )
 
 type Uploader struct {
@@ -100,8 +101,10 @@ func (u *Uploader) Upload(ctx context.Context, body io.ReadCloser, fileSize int6
 		}, errors.New("failed to publish blob to queue for further processing")
 	}
 
+	fileExtension := utils.GetExtensionFromMimeType(result.Type)
+
 	return entity.UploadResult{
-		Location: fmt.Sprintf("%s/%s", u.defaultAddress, expectedHash),
+		Location: fmt.Sprintf("%s/%s%s", u.defaultAddress, expectedHash, fileExtension),
 		Type:     result.Type,
 		Size:     result.Size,
 		Status:   http.StatusOK,

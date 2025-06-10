@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"nos3/pkg/logger"
 	"strconv"
 	"testing"
 	"time"
@@ -242,6 +243,7 @@ func TestHandle_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer redisClient.Close()
 
 	publisher := broker.NewPublisher(redisClient, broker.PublisherConfig{Timeout: 1000}, grpcClient)
 
@@ -259,6 +261,12 @@ func TestHandle_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func(db *database.Database) {
+		err := db.Stop()
+		if err != nil {
+			logger.Error("couldn't stop db instance")
+		}
+	}(db)
 
 	writer := database.NewBlobWriter(db, grpcClient)
 	retriever := database.NewBlobRetriever(db, grpcClient)
@@ -289,7 +297,7 @@ func TestHandle_Integration(t *testing.T) {
 
 	e := echo.New()
 	e.Use(echoMiddleware.Logger())
-	e.POST("/", handler.Handle, middleware.AuthMiddleware("upload"))
+	e.POST("/upload", handler.Handle, middleware.AuthMiddleware("upload"))
 	testCases := []struct {
 		name           string
 		setupRequest   func() *http.Request
@@ -305,10 +313,10 @@ func TestHandle_Integration(t *testing.T) {
 				hexHash := hex.EncodeToString(hash[:])
 
 				bodyReader := io.NopCloser(bytes.NewReader(content))
-				req := httptest.NewRequest(http.MethodPost, "/", bodyReader)
+				req := httptest.NewRequest(http.MethodPost, "/upload", bodyReader)
 
 				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t,
-					600, "upload", hexHash))
+					600, "upload", hexHash, ""))
 				req.Header.Set(presentation.TypeKey, "text/plain")
 
 				return req
@@ -328,8 +336,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := bytes.Repeat([]byte("a"), 10*1024*1024)
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]), ""))
 				req.Header.Set(presentation.TypeKey, "text/plain")
 
 				return req
@@ -347,8 +355,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := append([]byte("%PDF-"), bytes.Repeat([]byte("a"), 1024)...)
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]), ""))
 				req.Header.Set(presentation.TypeKey, "application/pdf")
 
 				return req
@@ -366,8 +374,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := append([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}, bytes.Repeat([]byte("a"), 100)...)
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]), ""))
 				req.Header.Set(presentation.TypeKey, "image/png")
 
 				return req
@@ -383,14 +391,14 @@ func TestHandle_Integration(t *testing.T) {
 		{
 			name: "Missing Authorization header",
 			setupRequest: func() *http.Request {
-				return httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte("test")))
+				return httptest.NewRequest(http.MethodPost, "/upload", bytes.NewReader([]byte("test")))
 			},
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			name: "Invalid Nostr prefix",
 			setupRequest: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte("test")))
+				req := httptest.NewRequest(http.MethodPost, "/upload", bytes.NewReader([]byte("test")))
 				req.Header.Set(presentation.AuthKey, "Bearer invalid")
 
 				return req
@@ -402,8 +410,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := []byte("test")
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, -600, "upload", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, -600, "upload", hex.EncodeToString(hash[:]), ""))
 
 				return req
 			},
@@ -414,8 +422,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := []byte("test")
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "download", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "download", hex.EncodeToString(hash[:]), ""))
 
 				return req
 			},
@@ -425,8 +433,8 @@ func TestHandle_Integration(t *testing.T) {
 			name: "Invalid hash",
 			setupRequest: func() *http.Request {
 				content := []byte("test")
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", "invalidhash"))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", "invalidhash", ""))
 
 				return req
 			},
@@ -437,8 +445,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := []byte("")
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]), ""))
 
 				return req
 			},
@@ -449,8 +457,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := []byte("test")
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodGet, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodGet, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]), ""))
 
 				return req
 			},
@@ -461,8 +469,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := []byte("test")
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]), ""))
 				req.Header.Set(presentation.TypeKey, "invalid/type")
 
 				return req
@@ -474,8 +482,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := append([]byte("\x00\x00\x00\x18ftypmp42"), bytes.Repeat([]byte("a"), 5*1024*1024)...)
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]), ""))
 				req.Header.Set(presentation.TypeKey, "video/mp4")
 
 				return req
@@ -493,8 +501,8 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := append([]byte("PK\x03\x04"), bytes.Repeat([]byte("a"), 1024)...)
 				hash := sha256.Sum256(content)
-				req := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
-				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:])))
+				req := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
+				req.Header.Set(presentation.AuthKey, generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]), ""))
 				req.Header.Set(presentation.TypeKey, "application/zip")
 
 				return req
@@ -511,7 +519,7 @@ func TestHandle_Integration(t *testing.T) {
 			name: "Invalid JSON event",
 			setupRequest: func() *http.Request {
 				badJSON := base64.StdEncoding.EncodeToString([]byte(`{"invalid":`))
-				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte("test")))
+				req := httptest.NewRequest(http.MethodPost, "/upload", bytes.NewReader([]byte("test")))
 				req.Header.Set(presentation.AuthKey, "Nostr "+badJSON)
 
 				return req
@@ -523,9 +531,9 @@ func TestHandle_Integration(t *testing.T) {
 			setupRequest: func() *http.Request {
 				content := []byte("test")
 				hash := sha256.Sum256(content)
-				authHeader := generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]))
+				authHeader := generateValidAuthHeader(t, 600, "upload", hex.EncodeToString(hash[:]), "")
 
-				req1 := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req1 := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
 				req1.Header.Set(presentation.AuthKey, authHeader)
 				req1.Header.Set(presentation.TypeKey, "text/plain")
 				rec1 := httptest.NewRecorder()
@@ -534,7 +542,7 @@ func TestHandle_Integration(t *testing.T) {
 					t.Fatal("First request failed")
 				}
 
-				req2 := httptest.NewRequest(http.MethodPost, "/", io.NopCloser(bytes.NewReader(content)))
+				req2 := httptest.NewRequest(http.MethodPost, "/upload", io.NopCloser(bytes.NewReader(content)))
 				req2.Header.Set(presentation.AuthKey, authHeader)
 				req2.Header.Set(presentation.TypeKey, "text/plain")
 
@@ -557,17 +565,23 @@ func TestHandle_Integration(t *testing.T) {
 	}
 }
 
-func generateValidAuthHeader(t *testing.T, expirationOffset int64, action, hash string) string {
+func generateValidAuthHeader(t *testing.T, expirationOffset int64, action, hash, serverURL string) string {
 	t.Helper()
+
+	tags := nostr.Tags{
+		{presentation.ExpTag, strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
+		{presentation.TTag, action},
+		{presentation.XTag, hash},
+	}
+
+	if serverURL != "" && action == "get" {
+		tags = append(tags, nostr.Tag{presentation.ServerTag, serverURL})
+	}
 
 	event := nostr.Event{
 		Kind:      24242,
 		CreatedAt: nostr.Timestamp(time.Now().Unix() - 10),
-		Tags: nostr.Tags{
-			{presentation.ExpTag, strconv.FormatInt(time.Now().Unix()+expirationOffset, 10)},
-			{presentation.TTag, action},
-			{presentation.XTag, hash},
-		},
+		Tags:      tags,
 	}
 	_ = event.Sign(SecretKey)
 	eventBytes, err := json.Marshal(event)

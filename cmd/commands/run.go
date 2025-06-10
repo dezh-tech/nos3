@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"nos3/internal/presentation"
+
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 
@@ -58,6 +60,7 @@ func HandleRun(args []string) {
 	if err != nil {
 		ExitOnError(err)
 	}
+	defer brokerClient.Close()
 
 	brokerPublisher := broker.NewPublisher(brokerClient, cfg.PublisherConfig, grpcClient)
 
@@ -66,9 +69,17 @@ func HandleRun(args []string) {
 		ExitOnError(err)
 	}
 
+	defer func(db *database.Database) {
+		err := db.Stop()
+		if err != nil {
+			logger.Error("couldn't stop db instance")
+		}
+	}(db)
+
 	dbRemover := database.NewRemover(db, grpcClient)
 	dbRetriever := database.NewBlobRetriever(db, grpcClient)
 	dbWriter := database.NewBlobWriter(db, grpcClient)
+	dbLister := database.NewBlobLister(db, grpcClient)
 
 	minIOClient, err := minio.New(cfg.MinIOClient, grpcClient)
 	if err != nil {
@@ -80,9 +91,26 @@ func HandleRun(args []string) {
 	uploader := usecase.NewUploader(brokerPublisher, dbRetriever, dbWriter, minIOUploader,
 		minIORemover, dbRemover, cfg.Default.Address)
 
+	getter := usecase.NewGetter(dbRetriever)
+	lister := usecase.NewLister(dbLister, cfg.Default.Address)
+	deleter := usecase.NewDeleter(dbRetriever, dbRemover, minIORemover)
+
 	uploadHandler := handler.NewUploadHandler(uploader)
+	getHandler := handler.NewGetHandler(getter)
+	headHandler := handler.NewHeadHandler(getter)
+	listHandler := handler.NewListHandler(lister)
+	deleteHandler := handler.NewDeleteHandler(deleter)
+
 	e := echo.New()
-	e.Use(echoMiddleware.CORS())
+	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowHeaders: []string{echo.HeaderAuthorization, echo.HeaderContentType, echo.HeaderContentLength},
+		AllowMethods: []string{
+			http.MethodGet, http.MethodPut, http.MethodPost,
+			http.MethodDelete, http.MethodHead, http.MethodOptions,
+		},
+		MaxAge: 86400,
+	}))
 	e.Use(echoMiddleware.Logger())
 	e.Use(echoMiddleware.Recover())
 	e.Use(echoMiddleware.Secure())
@@ -93,7 +121,15 @@ func HandleRun(args []string) {
 		return c.String(200, "OK")
 	})
 
-	e.POST("/", uploadHandler.Handle, middleware.AuthMiddleware("upload"))
+	e.POST("/upload", uploadHandler.Handle, middleware.AuthMiddleware("upload"))
+	e.GET(fmt.Sprintf("/:%s", presentation.Sha256Param), getHandler.HandleGet,
+		middleware.AuthMiddleware("get"), middleware.AuthGetMiddleware())
+	e.HEAD(fmt.Sprintf("/:%s", presentation.Sha256Param), headHandler.HandleHead,
+		middleware.AuthMiddleware("head"))
+	e.GET(fmt.Sprintf("/list/:%s", presentation.PK), listHandler.HandleList,
+		middleware.AuthMiddleware("list"))
+	e.DELETE(fmt.Sprintf("/:%s", presentation.Sha256Param), deleteHandler.HandleDelete,
+		middleware.AuthMiddleware("delete"), middleware.AuthDeleteMiddleware())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

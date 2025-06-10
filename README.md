@@ -19,8 +19,9 @@ The NOS3 is a Blossom protocol implementation designed to be scalable, high-perf
 
 Here is a list of supported BUDs:
 
-- [ ] BUD-01: Server requirements and blob retrieval
-- [ ] BUD-02: Blob upload and management
+- [X] BUD-01: Server requirements and blob retrieval
+- [X] BUD-02: Blob upload and management
+- [ ] BUD-03: User Server List
 - [ ] BUD-04: Mirroring blobs
 - [ ] BUD-05: Media optimization
 - [ ] BUD-06: Upload requirements
