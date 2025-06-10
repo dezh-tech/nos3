@@ -36,6 +36,8 @@ Here is a list of supported BUDs:
 - [ ] Object detection and CASM reporting
 - [ ] Malware detection
 - [ ] Statistics
+- [ ] Search media with text
+- [ ] Labeling and classification
 
 ## Updates
 
