@@ -12,10 +12,11 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"nos3/pkg/logger"
 	"strconv"
 	"testing"
 	"time"
+
+	"nos3/pkg/logger"
 
 	"github.com/labstack/echo/v4"
 	"github.com/minio/minio-go/v7"

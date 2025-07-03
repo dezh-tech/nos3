@@ -2,9 +2,10 @@ package database
 
 import (
 	"context"
-	"nos3/pkg/logger"
 	"testing"
 	"time"
+
+	"nos3/pkg/logger"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

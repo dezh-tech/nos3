@@ -27,7 +27,8 @@ func NewLister(lister database.Lister, address string) *Lister {
 
 // ListBlobs retrieves blobs by author and optional time filters from the database.
 func (l *Lister) ListBlobs(ctx context.Context, pubKey string, since,
-	until *time.Time) ([]dto.BlobDescriptor, int, error) {
+	until *time.Time,
+) ([]dto.BlobDescriptor, int, error) {
 	blobs, err := l.lister.GetByAuthor(ctx, pubKey, since, until)
 	if err != nil {
 		return nil, http.StatusNotFound, errors.New("failed to retrieve blobs")

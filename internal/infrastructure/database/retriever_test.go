@@ -25,6 +25,12 @@ func (m *MockGRPC) AddLog(_ context.Context, _, _ string) (*gen.AddLogResponse, 
 	return &gen.AddLogResponse{}, nil
 }
 
+func (m *MockGRPC) AddReport(_ context.Context, _ string, _ []string, _, _, _, _ string) (
+	*gen.AddReportResponse, error,
+) {
+	return &gen.AddReportResponse{}, nil
+}
+
 func TestRetrieve(t *testing.T) {
 	t.Parallel()
 	uri, cleanUp := setupMongo(t)

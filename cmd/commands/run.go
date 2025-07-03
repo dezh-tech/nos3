@@ -94,12 +94,14 @@ func HandleRun(args []string) {
 	getter := usecase.NewGetter(dbRetriever)
 	lister := usecase.NewLister(dbLister, cfg.Default.Address)
 	deleter := usecase.NewDeleter(dbRetriever, dbRemover, minIORemover)
+	reporter := usecase.NewBlobReporter(grpcClient)
 
 	uploadHandler := handler.NewUploadHandler(uploader)
 	getHandler := handler.NewGetHandler(getter)
 	headHandler := handler.NewHeadHandler(getter)
 	listHandler := handler.NewListHandler(lister)
 	deleteHandler := handler.NewDeleteHandler(deleter)
+	reportHandler := handler.NewReportHandler(reporter)
 
 	e := echo.New()
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
@@ -130,6 +132,7 @@ func HandleRun(args []string) {
 		middleware.AuthMiddleware("list"))
 	e.DELETE(fmt.Sprintf("/:%s", presentation.Sha256Param), deleteHandler.HandleDelete,
 		middleware.AuthMiddleware("delete"), middleware.AuthDeleteMiddleware())
+	e.PUT("/report", reportHandler.HandleReport)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

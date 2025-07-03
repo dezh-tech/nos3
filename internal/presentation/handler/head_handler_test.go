@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"nos3/pkg/logger"
 	"testing"
 	"time"
+
+	"nos3/pkg/logger"
 
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"

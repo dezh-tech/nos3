@@ -12,6 +12,7 @@ import (
 type Client struct {
 	RegistryService mpb.ServiceRegistryClient
 	LogService      mpb.LogClient
+	ReportService   mpb.ReportClient
 	config          ClientConfig
 	conn            *grpc.ClientConn
 }
@@ -46,4 +47,25 @@ func (c *Client) AddLog(ctx context.Context, msg, stack string) (*mpb.AddLogResp
 		Message: msg,
 		Stack:   stack,
 	})
+}
+
+func (c *Client) AddReport(ctx context.Context, pubKey string, blobHashes []string,
+	reportType, eventID, content, serverURL string,
+) (*mpb.AddReportResponse, error) {
+	req := &mpb.AddReportRequest{
+		PubKey:     pubKey,
+		BlobHashes: blobHashes,
+		ReportType: reportType,
+	}
+	if eventID != "" {
+		req.EventId = &eventID
+	}
+	if content != "" {
+		req.Content = &content
+	}
+	if serverURL != "" {
+		req.ServerUrl = &serverURL
+	}
+
+	return c.ReportService.AddReport(ctx, req)
 }

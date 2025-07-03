@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package manager.v1;
+
+option go_package = "github.com/dezh-tech/nos3/internal/infrastructure/grpcclient/gen";
+
+service Report {
+  rpc AddReport(AddReportRequest) returns (AddReportResponse);
+}
+
+message AddReportRequest {
+  string pub_key = 1;
+  repeated string blob_hashes = 2;
+  string report_type = 3;
+  optional string event_id = 4;
+  optional string content = 5;
+  optional string server_url = 6;
+}
+
+message AddReportResponse {
+  bool success = 1;
+  optional string message = 2;
+}
