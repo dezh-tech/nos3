@@ -29,6 +29,11 @@ func (h *DeleteHandler) HandleDelete(c echo.Context) error {
 	}
 
 	sha256 = removeFileExtension(sha256)
+	if !validateSHA256(sha256) {
+		c.Response().Header().Set(presentation.ReasonTag, "invalid sha256 hash")
+
+		return c.NoContent(http.StatusBadRequest)
+	}
 
 	status, err := h.deleter.DeleteBlob(c.Request().Context(), sha256)
 	if err != nil {

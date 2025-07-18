@@ -29,7 +29,8 @@ func (r *BlobRetriever) GetByID(ctx context.Context, id string) (*model.Blob, er
 	coll := r.db.Client.Database(r.db.DBName).Collection(BlobCollection)
 
 	var blob model.Blob
-	err := coll.FindOne(ctx, bson.M{"_id": id}).Decode(&blob)
+	filter := bson.M{"_id": id}
+	err := coll.FindOne(ctx, filter).Decode(&blob)
 	if err != nil {
 		if _, logErr := r.grpcClient.AddLog(ctx, "failed to retrieve blob by id", err.Error()); logErr != nil {
 			logger.Error("can't send log to manager", "err", logErr)
