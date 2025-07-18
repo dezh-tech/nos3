@@ -25,8 +25,8 @@ func NewListHandler(lister abstraction.Lister) *ListHandler {
 // HandleList handles GET /list/:pubKey requests.
 func (h *ListHandler) HandleList(c echo.Context) error {
 	pubKey := c.Param(presentation.PK)
-	if pubKey == "" {
-		c.Response().Header().Set(presentation.ReasonTag, "missing pubKey")
+	if pubKey == "" || !isValidPubKey(pubKey) {
+		c.Response().Header().Set(presentation.ReasonTag, "invalid or missing pubKey")
 
 		return c.NoContent(http.StatusBadRequest)
 	}
@@ -70,4 +70,10 @@ func parseTimeQueryParam(c echo.Context, paramName string) (*time.Time, error) {
 	t := time.Unix(ts, 0)
 
 	return &t, nil
+}
+
+// isValidPubKey validates the pubKey to ensure it is alphanumeric and meets expected length constraints.
+func isValidPubKey(pubKey string) bool {
+	const pubKeyPattern = `^[a-zA-Z0-9]{1,64}$` // Example: Adjust length as needed
+	return regexp.MustCompile(pubKeyPattern).MatchString(pubKey)
 }
