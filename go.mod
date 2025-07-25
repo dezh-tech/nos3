@@ -3,6 +3,7 @@ module nos3
 go 1.24.1
 
 require (
+	github.com/dutchcoders/go-clamd v0.0.0-20170520113014-b970184f4d9e
 	github.com/gabriel-vasile/mimetype v1.4.9
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
