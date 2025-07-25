@@ -9,6 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"nos3/internal/infrastructure/broker"
+	"nos3/internal/infrastructure/clamav"
 	"nos3/internal/infrastructure/database"
 	"nos3/internal/infrastructure/grpcclient"
 	"nos3/internal/infrastructure/minio"
@@ -28,6 +29,7 @@ type Config struct {
 	GRPCClient      grpcclient.ClientConfig `yaml:"manager"`
 	GRPCServer      grpcclient.ServerConfig `yaml:"grpc_server"`
 	Logger          logger.Config           `yaml:"logger"`
+	ClamAVConfig    clamav.ScannerConfig    `yaml:"clamav_scanner"`
 }
 
 func Load(path string) (*Config, error) {
@@ -61,6 +63,7 @@ func Load(path string) (*Config, error) {
 	config.MinIOClient.SecretKey = os.Getenv("MINIO_ROOT_PASSWORD")
 	config.DBConfig.URI = os.Getenv("DATABASE_URI")
 	config.BrokerConfig.URI = os.Getenv("BROKER_URI")
+	config.ClamAVConfig.Address = os.Getenv("CLAMAV_ADDRESS")
 
 	if err = config.basicCheck(); err != nil {
 		return nil, Error{
