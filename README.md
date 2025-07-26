@@ -26,8 +26,8 @@ Here is a list of supported BUDs:
 - [ ] BUD-05: Media optimization
 - [ ] BUD-06: Upload requirements
 - [ ] BUD-08: Nostr File Metadata Tags
-- [ ] BUD-09: Blob Report
-- [ ] BUD-12: Media servers information document
+- [X] BUD-09: Blob Report
+- [X] BUD-12: Media servers information document
 
 ## Features
 
