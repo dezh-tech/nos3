@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/dutchcoders/go-clamd"
+	"io"
 	"net"
+	"nos3/internal/domain/repository/clamav"
 	"strings"
 	"testing"
 	"time"
@@ -21,7 +23,29 @@ import (
 )
 
 const (
-	ClamAVImage = "clamav/clamav:latest"
+	ClamAVImage                  = "clamav/clamav:latest"
+	ClamAVPort                   = "3310/tcp"
+	ClamAVAddressFormat          = "tcp://%s"
+	CleanFileContent             = "This is a clean test file with no malware."
+	EmptyFileContent             = ""
+	LargeCleanFileContent        = "This is a clean file content. "
+	SmallCleanBenchmarkContent   = "This is a small clean test file for benchmarking."
+	LargeCleanBenchmarkContent   = "Large file content for benchmarking. "
+	InfectedContent              = "infected content"
+	UnparseableContent           = "unparseable content"
+	SomeContent                  = "some content"
+	MalwareDescTrojan            = "Trojan.Generic.123"
+	MalwareDescVirus             = "Virus.Win32.Test"
+	MalwareDescMalwareSuspicious = "Malware.Suspicious.456"
+	ScanErrorCorruptedData       = "Unable to scan file: corrupted data"
+	ParseErrorFileFormatNotRecog = "File format not recognized"
+	MalwareDescTrojanTest        = "Trojan.Test.123"
+	MalwareDescVirusTest         = "Virus.Test.456"
+	Timeout                      = 30000
+	TimeoutDuration              = 30 * time.Second
+	StartupTimeoutDuration       = 60 * time.Second
+	LargeFileContentRepeatCount  = 350000
+	LargeBenchmarkRepeatCount    = 30000
 )
 
 type MockGRPC struct {
@@ -44,15 +68,47 @@ func (m *MockGRPC) AddReport(_ context.Context, _ string, _ []string, _, _, _, _
 	args := m.Called()
 	return args.Get(0).(*gen.AddReportResponse), args.Error(1)
 }
+
+type MockClamdClient struct {
+	mock.Mock
+}
+
+func (m *MockClamdClient) Ping() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockClamdClient) ScanStream(reader io.Reader, abort chan bool) (chan *clamd.ScanResult, error) {
+	args := m.Called(reader, abort)
+	return args.Get(0).(chan *clamd.ScanResult), args.Error(1)
+}
+
+func createMockScanner(clamdClient clamav.ClamdClient, grpcClient *MockGRPC) *Scanner {
+	return &Scanner{
+		clamd:      clamdClient,
+		timeout:    30 * time.Second,
+		grpcClient: grpcClient,
+	}
+}
+
+func createMockResultChannel(results []*clamd.ScanResult) chan *clamd.ScanResult {
+	resultChan := make(chan *clamd.ScanResult, len(results))
+	for _, result := range results {
+		resultChan <- result
+	}
+	close(resultChan)
+	return resultChan
+}
+
 func setupClamAV(t *testing.T) (string, func()) {
 	t.Helper()
 	ctx := context.Background()
 
 	req := testcontainers.ContainerRequest{
 		Image:        ClamAVImage,
-		ExposedPorts: []string{"3310/tcp"},
+		ExposedPorts: []string{ClamAVPort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort("3310/tcp").WithStartupTimeout(60 * time.Second),
+			wait.ForListeningPort(ClamAVPort).WithStartupTimeout(StartupTimeoutDuration),
 		),
 	}
 
@@ -74,7 +130,7 @@ func setupClamAV(t *testing.T) (string, func()) {
 		t.Fatal("Failed to get mapped port:", err)
 	}
 
-	address := fmt.Sprintf("tcp://%s", net.JoinHostPort(host, port.Port()))
+	address := fmt.Sprintf(ClamAVAddressFormat, net.JoinHostPort(host, port.Port()))
 
 	return address, func() {
 		_ = container.Terminate(ctx)
@@ -92,11 +148,11 @@ func TestScanStream_CleanFile(t *testing.T) {
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
-		Timeout: 30000,
+		Timeout: Timeout,
 	}, mockGRPC)
 	require.NoError(t, err)
 
-	cleanContent := "This is a clean test file with no malware."
+	cleanContent := CleanFileContent
 	reader := strings.NewReader(cleanContent)
 
 	result, err := scanner.ScanStream(context.Background(), reader)
@@ -119,7 +175,7 @@ func TestScanStream_InfectedFile(t *testing.T) {
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
-		Timeout: 30000,
+		Timeout: Timeout,
 	}, mockGRPC)
 	require.NoError(t, err)
 
@@ -144,11 +200,11 @@ func TestScanStream_EmptyFile(t *testing.T) {
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
-		Timeout: 30000,
+		Timeout: Timeout,
 	}, mockGRPC)
 	require.NoError(t, err)
 
-	reader := strings.NewReader("")
+	reader := strings.NewReader(EmptyFileContent)
 
 	result, err := scanner.ScanStream(context.Background(), reader)
 
@@ -171,11 +227,11 @@ func TestScanStream_LargeCleanFile(t *testing.T) {
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
-		Timeout: 30000,
+		Timeout: Timeout,
 	}, mockGRPC)
 	require.NoError(t, err)
 
-	largeContent := strings.Repeat("This is a clean file content. ", 350000)
+	largeContent := strings.Repeat(LargeCleanFileContent, LargeFileContentRepeatCount)
 	reader := strings.NewReader(largeContent)
 
 	result, err := scanner.ScanStream(context.Background(), reader)
@@ -199,7 +255,7 @@ func TestScanStream_BinaryCleanFile(t *testing.T) {
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
-		Timeout: 30000,
+		Timeout: Timeout,
 	}, mockGRPC)
 	require.NoError(t, err)
 
@@ -216,15 +272,120 @@ func TestScanStream_BinaryCleanFile(t *testing.T) {
 	assert.Equal(t, 0, result.ThreatCount())
 }
 
+func TestScanStream_MultipleThreatsDetected(t *testing.T) {
+	mockGRPC := &MockGRPC{}
+	mockClamd := &MockClamdClient{}
+
+	results := []*clamd.ScanResult{
+		{Status: clamd.RES_FOUND, Description: MalwareDescTrojan},
+		{Status: clamd.RES_FOUND, Description: MalwareDescVirus},
+		{Status: clamd.RES_FOUND, Description: MalwareDescMalwareSuspicious},
+	}
+	resultChan := createMockResultChannel(results)
+
+	mockClamd.On("ScanStream", mock.Anything, mock.Anything).Return(resultChan, nil)
+
+	scanner := createMockScanner(mockClamd, mockGRPC)
+	reader := strings.NewReader(InfectedContent)
+
+	result, err := scanner.ScanStream(context.Background(), reader)
+
+	assert.NoError(t, err)
+	assert.Equal(t, entity.MalwareScanStatusInfected, result.Status)
+	assert.Equal(t, 3, len(result.Threats))
+	assert.Contains(t, result.Threats, MalwareDescTrojan)
+	assert.Contains(t, result.Threats, MalwareDescVirus)
+	assert.Contains(t, result.Threats, MalwareDescMalwareSuspicious)
+}
+
+func TestScanStream_ScanErrorDuringScan(t *testing.T) {
+	mockGRPC := &MockGRPC{}
+	mockClamd := &MockClamdClient{}
+
+	results := []*clamd.ScanResult{
+		{Status: clamd.RES_ERROR, Description: ScanErrorCorruptedData},
+	}
+	resultChan := createMockResultChannel(results)
+
+	mockClamd.On("ScanStream", mock.Anything, mock.Anything).Return(resultChan, nil)
+
+	scanner := createMockScanner(mockClamd, mockGRPC)
+	reader := strings.NewReader(SomeContent)
+
+	result, err := scanner.ScanStream(context.Background(), reader)
+
+	assert.Error(t, err)
+	assert.Equal(t, entity.MalwareScanStatusError, result.Status)
+	assert.Contains(t, result.Error, "scan failed")
+
+	malwareErr, ok := err.(*MalwareError)
+	assert.True(t, ok)
+	assert.Equal(t, ErrorCodeScanFailed, malwareErr.Code)
+	assert.Equal(t, ScanErrorCorruptedData, malwareErr.Details)
+}
+
+func TestScanStream_MixedResults(t *testing.T) {
+	mockGRPC := &MockGRPC{}
+	mockClamd := &MockClamdClient{}
+
+	results := []*clamd.ScanResult{
+		{Status: clamd.RES_OK, Description: ""},
+		{Status: clamd.RES_FOUND, Description: MalwareDescTrojanTest},
+		{Status: clamd.RES_OK, Description: ""},
+		{Status: clamd.RES_FOUND, Description: MalwareDescVirusTest},
+		{Status: clamd.RES_OK, Description: ""},
+	}
+	resultChan := createMockResultChannel(results)
+
+	mockClamd.On("ScanStream", mock.Anything, mock.Anything).Return(resultChan, nil)
+
+	scanner := createMockScanner(mockClamd, mockGRPC)
+	reader := strings.NewReader("mixed content")
+
+	result, err := scanner.ScanStream(context.Background(), reader)
+
+	assert.NoError(t, err)
+	assert.Equal(t, entity.MalwareScanStatusInfected, result.Status)
+	assert.Equal(t, 2, len(result.Threats))
+	assert.Contains(t, result.Threats, MalwareDescTrojanTest)
+	assert.Contains(t, result.Threats, MalwareDescVirusTest)
+}
+
+func TestScanStream_ParseErrorDuringScan(t *testing.T) {
+	mockGRPC := &MockGRPC{}
+	mockClamd := &MockClamdClient{}
+
+	results := []*clamd.ScanResult{
+		{Status: clamd.RES_PARSE_ERROR, Description: ParseErrorFileFormatNotRecog},
+	}
+	resultChan := createMockResultChannel(results)
+
+	mockClamd.On("ScanStream", mock.Anything, mock.Anything).Return(resultChan, nil)
+
+	scanner := createMockScanner(mockClamd, mockGRPC)
+	reader := strings.NewReader(UnparseableContent)
+
+	result, err := scanner.ScanStream(context.Background(), reader)
+
+	assert.Error(t, err)
+	assert.Equal(t, entity.MalwareScanStatusError, result.Status)
+	assert.Contains(t, result.Error, "scan failed")
+
+	malwareErr, ok := err.(*MalwareError)
+	assert.True(t, ok)
+	assert.Equal(t, ErrorCodeScanFailed, malwareErr.Code)
+	assert.Equal(t, ParseErrorFileFormatNotRecog, malwareErr.Details)
+}
+
 func setupClamAVBenchmark(b *testing.B) (string, func()) {
 	b.Helper()
 	ctx := context.Background()
 
 	req := testcontainers.ContainerRequest{
 		Image:        ClamAVImage,
-		ExposedPorts: []string{"3310/tcp"},
+		ExposedPorts: []string{ClamAVPort},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort("3310/tcp").WithStartupTimeout(60 * time.Second),
+			wait.ForListeningPort(ClamAVPort).WithStartupTimeout(StartupTimeoutDuration),
 		),
 	}
 
@@ -246,7 +407,7 @@ func setupClamAVBenchmark(b *testing.B) (string, func()) {
 		b.Fatal("Failed to get mapped port:", err)
 	}
 
-	address := fmt.Sprintf("tcp://%s", net.JoinHostPort(host, port.Port()))
+	address := fmt.Sprintf(ClamAVAddressFormat, net.JoinHostPort(host, port.Port()))
 
 	return address, func() {
 		_ = container.Terminate(ctx)
@@ -263,13 +424,13 @@ func BenchmarkScanStream_SmallCleanFile(b *testing.B) {
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
-		Timeout: 30000,
+		Timeout: Timeout,
 	}, mockGRPC)
 	if err != nil {
 		b.Fatal("Failed to create scanner:", err)
 	}
 
-	content := "This is a small clean test file for benchmarking."
+	content := SmallCleanBenchmarkContent
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -291,13 +452,13 @@ func BenchmarkScanStream_LargeCleanFile(b *testing.B) {
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
-		Timeout: 30000,
+		Timeout: Timeout,
 	}, mockGRPC)
 	if err != nil {
 		b.Fatal("Failed to create scanner:", err)
 	}
 
-	content := strings.Repeat("Large file content for benchmarking. ", 30000)
+	content := strings.Repeat(LargeCleanBenchmarkContent, LargeBenchmarkRepeatCount)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
