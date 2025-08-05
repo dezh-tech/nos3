@@ -3,6 +3,7 @@ package clamav
 import (
 	"context"
 	"io"
+	"nos3/internal/domain/repository/clamav"
 	"time"
 
 	"github.com/dutchcoders/go-clamd"
@@ -13,7 +14,7 @@ import (
 )
 
 type Scanner struct {
-	clamd      *clamd.Clamd
+	clamd      clamav.ClamdClient
 	timeout    time.Duration
 	grpcClient grpcRepository.IClient
 }
@@ -21,10 +22,10 @@ type Scanner struct {
 func NewScanner(cfg ScannerConfig, grpcClient grpcRepository.IClient) (*Scanner, error) {
 	logger.Info("connecting to ClamAV daemon", "address", cfg.Address)
 
-	c := clamd.NewClamd(cfg.Address)
+	clamdClient := clamd.NewClamd(cfg.Address)
 
 	scanner := &Scanner{
-		clamd:      c,
+		clamd:      clamdClient,
 		timeout:    time.Duration(cfg.Timeout) * time.Millisecond,
 		grpcClient: grpcClient,
 	}
