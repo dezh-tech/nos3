@@ -1,8 +1,9 @@
 package clamav
 
 import (
-	"github.com/dutchcoders/go-clamd"
 	"io"
+
+	"github.com/dutchcoders/go-clamd"
 )
 
 type ClamdClient interface {

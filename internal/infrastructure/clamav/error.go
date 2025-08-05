@@ -23,6 +23,7 @@ func (e *MalwareError) Error() string {
 	if e.Details != "" {
 		return fmt.Sprintf("%s: %s", e.Message, e.Details)
 	}
+
 	return e.Message
 }
 

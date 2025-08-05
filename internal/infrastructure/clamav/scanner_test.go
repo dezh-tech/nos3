@@ -3,15 +3,15 @@ package clamav
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"github.com/dutchcoders/go-clamd"
 	"io"
 	"net"
-	"nos3/internal/domain/repository/clamav"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/dutchcoders/go-clamd"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -19,6 +19,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"nos3/internal/domain/entity"
+	"nos3/internal/domain/repository/clamav"
 	"nos3/internal/infrastructure/grpcclient/gen"
 )
 
@@ -54,11 +55,13 @@ type MockGRPC struct {
 
 func (m *MockGRPC) RegisterService(_ context.Context, _, _ string) (*gen.RegisterServiceResponse, error) {
 	args := m.Called()
+
 	return args.Get(0).(*gen.RegisterServiceResponse), args.Error(1)
 }
 
 func (m *MockGRPC) AddLog(_ context.Context, msg, stack string) (*gen.AddLogResponse, error) {
 	args := m.Called(msg, stack)
+
 	return args.Get(0).(*gen.AddLogResponse), args.Error(1)
 }
 
@@ -66,6 +69,7 @@ func (m *MockGRPC) AddReport(_ context.Context, _ string, _ []string, _, _, _, _
 	*gen.AddReportResponse, error,
 ) {
 	args := m.Called()
+
 	return args.Get(0).(*gen.AddReportResponse), args.Error(1)
 }
 
@@ -75,11 +79,13 @@ type MockClamdClient struct {
 
 func (m *MockClamdClient) Ping() error {
 	args := m.Called()
+
 	return args.Error(0)
 }
 
 func (m *MockClamdClient) ScanStream(reader io.Reader, abort chan bool) (chan *clamd.ScanResult, error) {
 	args := m.Called(reader, abort)
+
 	return args.Get(0).(chan *clamd.ScanResult), args.Error(1)
 }
 
@@ -97,6 +103,7 @@ func createMockResultChannel(results []*clamd.ScanResult) chan *clamd.ScanResult
 		resultChan <- result
 	}
 	close(resultChan)
+
 	return resultChan
 }
 
@@ -318,7 +325,9 @@ func TestScanStream_ScanErrorDuringScan(t *testing.T) {
 	assert.Equal(t, entity.MalwareScanStatusError, result.Status)
 	assert.Contains(t, result.Error, "scan failed")
 
-	malwareErr, ok := err.(*MalwareError)
+	var malwareErr *MalwareError
+	ok := errors.As(err, &malwareErr)
+
 	assert.True(t, ok)
 	assert.Equal(t, ErrorCodeScanFailed, malwareErr.Code)
 	assert.Equal(t, ScanErrorCorruptedData, malwareErr.Details)
@@ -371,7 +380,9 @@ func TestScanStream_ParseErrorDuringScan(t *testing.T) {
 	assert.Equal(t, entity.MalwareScanStatusError, result.Status)
 	assert.Contains(t, result.Error, "scan failed")
 
-	malwareErr, ok := err.(*MalwareError)
+	var malwareErr *MalwareError
+	ok := errors.As(err, &malwareErr)
+
 	assert.True(t, ok)
 	assert.Equal(t, ErrorCodeScanFailed, malwareErr.Code)
 	assert.Equal(t, ParseErrorFileFormatNotRecog, malwareErr.Details)

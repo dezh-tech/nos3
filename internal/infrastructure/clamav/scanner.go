@@ -31,9 +31,11 @@ func NewScanner(cfg ScannerConfig, grpcClient grpcRepository.IClient) (*Scanner,
 	}
 
 	if err := scanner.ping(); err != nil {
-		if _, logErr := grpcClient.AddLog(context.Background(), "failed to connect to ClamAV daemon", err.Error()); logErr != nil {
+		if _, logErr := grpcClient.AddLog(context.Background(),
+			"failed to connect to ClamAV daemon", err.Error()); logErr != nil {
 			logger.Error("can't send log to manager", "err", logErr)
 		}
+
 		return nil, err
 	}
 
@@ -62,6 +64,7 @@ func (s *Scanner) ScanStream(ctx context.Context, reader io.Reader) (entity.Malw
 	resultChan, err := s.clamd.ScanStream(reader, abort)
 	if err != nil {
 		s.logError(ctx, "failed to initiate stream scan", err.Error())
+
 		return entity.MalwareScanResult{
 				Status: entity.MalwareScanStatusError,
 				Error:  err.Error(),
@@ -75,7 +78,8 @@ func (s *Scanner) ScanStream(ctx context.Context, reader io.Reader) (entity.Malw
 	return s.processResults(ctx, resultChan)
 }
 
-func (s *Scanner) processResults(ctx context.Context, resultChan chan *clamd.ScanResult) (entity.MalwareScanResult, error) {
+func (s *Scanner) processResults(ctx context.Context,
+	resultChan chan *clamd.ScanResult) (entity.MalwareScanResult, error) {
 	var threats []string
 
 	for {
@@ -126,6 +130,7 @@ func (s *Scanner) handleScanResult(result *clamd.ScanResult, threats *[]string) 
 
 	case clamd.RES_FOUND:
 		*threats = append(*threats, result.Description)
+
 		return nil
 
 	case clamd.RES_ERROR, clamd.RES_PARSE_ERROR:
@@ -135,6 +140,7 @@ func (s *Scanner) handleScanResult(result *clamd.ScanResult, threats *[]string) 
 			Details: result.Description,
 		}
 	}
+
 	return nil
 }
 
