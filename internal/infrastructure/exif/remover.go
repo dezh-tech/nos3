@@ -16,6 +16,9 @@ type Remover struct {
 	grpcClient    grpcRepository.IClient
 }
 
+// NewRemover creates a new Remover instance that orchestrates EXIF metadata removal.
+// It uses dependency injection to receive validator and processor services.
+// This is the main entry point for EXIF removal operations.
 func NewRemover(
 	fileValidator exif.FileValidator,
 	exifProcessor exif.ExifProcessor,
@@ -32,6 +35,10 @@ func NewRemover(
 	}
 }
 
+// RemoveExifFromFile removes EXIF metadata from the specified file.
+// It first validates that the file type supports EXIF metadata.
+// If the file type is unsupported, returns nil (not an error).
+// For supported files, removes all EXIF data and returns any errors encountered.
 func (r *Remover) RemoveExifFromFile(ctx context.Context, filePath string) error {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -50,6 +57,8 @@ func (r *Remover) RemoveExifFromFile(ctx context.Context, filePath string) error
 	return nil
 }
 
+// Close closes the underlying EXIF processor and releases associated resources.
+// Should be called when the Remover is no longer needed.
 func (r *Remover) Close() error {
 	return r.exifProcessor.Close()
 }

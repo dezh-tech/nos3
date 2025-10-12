@@ -17,6 +17,9 @@ type Processor struct {
 	grpcClient grpcRepository.IClient
 }
 
+// NewProcessor creates a new Processor instance that handles EXIF metadata removal.
+// It initializes the ExifTool wrapper with stay-open mode for efficient processing.
+// Returns an error if ExifTool initialization fails.
 func NewProcessor(exiftoolCmd string,
 	timeout time.Duration,
 	grpcClient grpcRepository.IClient) (exif.ExifProcessor, error) {
@@ -48,6 +51,10 @@ func NewProcessor(exiftoolCmd string,
 	}, nil
 }
 
+// RemoveExifData removes all EXIF metadata from the specified file.
+// The operation is performed asynchronously with context cancellation support.
+// Returns ErrorCodeExifRemovalFailed if metadata removal fails.
+// Returns ErrorCodeTimeout if the operation exceeds the configured timeout.
 func (e *Processor) RemoveExifData(ctx context.Context, filePath string) error {
 	done := make(chan error, 1)
 
@@ -88,6 +95,8 @@ func (e *Processor) RemoveExifData(ctx context.Context, filePath string) error {
 	}
 }
 
+// Close closes the ExifTool process and releases associated resources.
+// Should be called when the Processor is no longer needed.
 func (e *Processor) Close() error {
 	if e.exiftool != nil {
 		return e.exiftool.Close()

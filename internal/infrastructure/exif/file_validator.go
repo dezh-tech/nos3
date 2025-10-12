@@ -10,12 +10,17 @@ type FileValidator struct {
 	extensionProvider exif.ExtensionProvider
 }
 
+// NewFileValidator creates a new FileValidator instance that validates file types
+// against ExifTool's supported extensions using the provided ExtensionProvider
 func NewFileValidator(extensionProvider exif.ExtensionProvider) exif.FileValidator {
 	return &FileValidator{
 		extensionProvider: extensionProvider,
 	}
 }
 
+// ValidateFileType checks if the given file path has an extension supported by ExifTool.
+// Returns ErrorCodeUnsupportedFileType if the file type is not supported.
+// Returns ErrorCodeExifToolNotFound if unable to retrieve supported extensions.
 func (f *FileValidator) ValidateFileType(filePath string) error {
 	ext := strings.ToLower(filepath.Ext(filePath))
 
