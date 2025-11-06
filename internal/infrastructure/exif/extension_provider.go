@@ -1,13 +1,15 @@
 package exif
 
 import (
-	"os/exec"
+	"nos3/internal/domain/repository/cli_executer"
 	"strings"
 	"sync"
 )
 
 type ExtensionProvider struct {
 	exiftoolCmd         string
+	listFlag            string
+	executor            cli_executer.CommandExecutor
 	supportedExtensions map[string]bool
 	initErr             error
 	once                sync.Once
@@ -17,7 +19,9 @@ type ExtensionProvider struct {
 // and cache supported file extensions from ExifTool
 func NewExtensionProvider(exiftoolCmd string) *ExtensionProvider {
 	return &ExtensionProvider{
-		exiftoolCmd: exiftoolCmd,
+		exiftoolCmd: cfg.ExifToolCmd,
+		listFlag:    cfg.ExifToolListFlag,
+		executor:    executor,
 	}
 }
 
@@ -43,14 +47,7 @@ func (e *ExtensionProvider) GetSupportedExtensions() (map[string]bool, error) {
 // fetchSupportedExtensions executes 'exiftool -listf' command to retrieve all
 // supported file extensions. Each extension is stored with a dot prefix and in lowercase.
 func (e *ExtensionProvider) fetchSupportedExtensions() (map[string]bool, error) {
-	var cmd *exec.Cmd
-	if e.exiftoolCmd != "" {
-		cmd = exec.Command(e.exiftoolCmd, "-listf")
-	} else {
-		cmd = exec.Command("exiftool", "-listf")
-	}
-
-	output, err := cmd.Output()
+	output, err := e.executor.Execute(e.exiftoolCmd, e.listFlag)
 	if err != nil {
 		return nil, err
 	}
