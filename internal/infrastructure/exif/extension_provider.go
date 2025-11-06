@@ -17,7 +17,7 @@ type ExtensionProvider struct {
 
 // NewExtensionProvider creates a new ExtensionProvider instance that can fetch
 // and cache supported file extensions from ExifTool
-func NewExtensionProvider(exiftoolCmd string) *ExtensionProvider {
+func NewExtensionProvider(cfg ExtensionProviderConfig, executor cli_executer.CommandExecutor) *ExtensionProvider {
 	return &ExtensionProvider{
 		exiftoolCmd: cfg.ExifToolCmd,
 		listFlag:    cfg.ExifToolListFlag,
