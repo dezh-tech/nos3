@@ -43,7 +43,6 @@ const (
 	MalwareDescTrojanTest        = "Trojan.Test.123"
 	MalwareDescVirusTest         = "Virus.Test.456"
 	Timeout                      = 30000
-	TimeoutDuration              = 30 * time.Second
 	StartupTimeoutDuration       = 60 * time.Second
 	LargeFileContentRepeatCount  = 350000
 	LargeBenchmarkRepeatCount    = 30000
@@ -151,7 +150,7 @@ func TestScanStream_CleanFile(t *testing.T) {
 
 	mockGRPC := &MockGRPC{}
 	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
-		Return(&gen.AddLogResponse{}, nil).Maybe()
+		Return(&gen.AddLogResponse{}, nil)
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
@@ -178,7 +177,7 @@ func TestScanStream_InfectedFile(t *testing.T) {
 
 	mockGRPC := &MockGRPC{}
 	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
-		Return(&gen.AddLogResponse{}, nil).Maybe()
+		Return(&gen.AddLogResponse{}, nil)
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
@@ -203,7 +202,7 @@ func TestScanStream_EmptyFile(t *testing.T) {
 
 	mockGRPC := &MockGRPC{}
 	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
-		Return(&gen.AddLogResponse{}, nil).Maybe()
+		Return(&gen.AddLogResponse{}, nil)
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
@@ -230,7 +229,7 @@ func TestScanStream_LargeCleanFile(t *testing.T) {
 
 	mockGRPC := &MockGRPC{}
 	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
-		Return(&gen.AddLogResponse{}, nil).Maybe()
+		Return(&gen.AddLogResponse{}, nil)
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
@@ -258,7 +257,7 @@ func TestScanStream_BinaryCleanFile(t *testing.T) {
 
 	mockGRPC := &MockGRPC{}
 	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
-		Return(&gen.AddLogResponse{}, nil).Maybe()
+		Return(&gen.AddLogResponse{}, nil)
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
@@ -431,7 +430,7 @@ func BenchmarkScanStream_SmallCleanFile(b *testing.B) {
 
 	mockGRPC := &MockGRPC{}
 	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
-		Return(&gen.AddLogResponse{}, nil).Maybe()
+		Return(&gen.AddLogResponse{}, nil)
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,
@@ -459,7 +458,7 @@ func BenchmarkScanStream_LargeCleanFile(b *testing.B) {
 
 	mockGRPC := &MockGRPC{}
 	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
-		Return(&gen.AddLogResponse{}, nil).Maybe()
+		Return(&gen.AddLogResponse{}, nil)
 
 	scanner, err := NewScanner(ScannerConfig{
 		Address: address,

@@ -96,7 +96,7 @@ func TestGetByAuthor(t *testing.T) {
 			defer cleanUp()
 
 			mockGrpcClient := &MockGRPC{}
-			mockGrpcClient.On("AddLog", mock.Anything, mock.Anything, mock.Anything).Return(&gen.AddLogResponse{Success: true}, nil).Maybe()
+			mockGrpcClient.On("AddLog", mock.Anything, mock.Anything, mock.Anything).Return(&gen.AddLogResponse{Success: true}, nil)
 
 			db, err := Connect(Config{
 				URI:               uri,
