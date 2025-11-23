@@ -3,7 +3,7 @@ package clamav
 import (
 	"io"
 
-	"github.com/dutchcoders/go-clamd"
+	"github.com/swimmingrieux/go-clamd"
 )
 
 type ClamdClient interface {

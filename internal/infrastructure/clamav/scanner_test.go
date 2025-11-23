@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dutchcoders/go-clamd"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/swimmingrieux/go-clamd"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 

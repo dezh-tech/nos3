@@ -6,7 +6,7 @@ import (
 	"nos3/internal/domain/repository/clamav"
 	"time"
 
-	"github.com/dutchcoders/go-clamd"
+	"github.com/swimmingrieux/go-clamd"
 
 	"nos3/internal/domain/entity"
 	grpcRepository "nos3/internal/domain/repository/grpcclient"

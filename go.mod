@@ -4,7 +4,6 @@ go 1.24.1
 
 require (
 	github.com/barasher/go-exiftool v1.10.0
-	github.com/dutchcoders/go-clamd v0.0.0-20170520113014-b970184f4d9e
 	github.com/gabriel-vasile/mimetype v1.4.9
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
@@ -14,6 +13,7 @@ require (
 	github.com/redis/go-redis/v9 v9.8.0
 	github.com/rs/zerolog v1.33.0
 	github.com/stretchr/testify v1.10.0
+	github.com/swimmingrieux/go-clamd v0.0.0-20251116164441-e8eb8db2ea4c
 	github.com/testcontainers/testcontainers-go v0.37.0
 	go.mongodb.org/mongo-driver v1.17.3
 	google.golang.org/grpc v1.70.0
