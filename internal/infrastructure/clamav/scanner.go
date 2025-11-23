@@ -3,8 +3,9 @@ package clamav
 import (
 	"context"
 	"io"
-	"nos3/internal/domain/repository/clamav"
 	"time"
+
+	"nos3/internal/domain/repository/clamav"
 
 	"github.com/swimmingrieux/go-clamd"
 
@@ -79,7 +80,8 @@ func (s *Scanner) ScanStream(ctx context.Context, reader io.Reader) (entity.Malw
 }
 
 func (s *Scanner) processResults(ctx context.Context,
-	resultChan chan *clamd.ScanResult) (entity.MalwareScanResult, error) {
+	resultChan chan *clamd.ScanResult,
+) (entity.MalwareScanResult, error) {
 	var threats []string
 
 	for {

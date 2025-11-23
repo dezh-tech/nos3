@@ -60,7 +60,7 @@ func createTestImageWithExif(t *testing.T, filePath string) {
 		0x00, 0x00, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F, 0x00,
 		0x37, 0xFF, 0xD9,
 	}
-	err := os.WriteFile(filePath, jpegData, 0644)
+	err := os.WriteFile(filePath, jpegData, 0o644)
 	require.NoError(t, err)
 	cmd := exec.Command("exiftool",
 		"-overwrite_original",
@@ -88,7 +88,7 @@ func createTestPNGWithExif(t *testing.T, filePath string) {
 		0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
 		0xAE, 0x42, 0x60, 0x82,
 	}
-	err := os.WriteFile(filePath, pngData, 0644)
+	err := os.WriteFile(filePath, pngData, 0o644)
 	require.NoError(t, err)
 	cmd := exec.Command("exiftool",
 		"-overwrite_original",

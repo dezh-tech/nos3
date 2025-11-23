@@ -1,9 +1,10 @@
 package exif
 
 import (
-	"nos3/internal/domain/repository/cli_executer"
 	"strings"
 	"sync"
+
+	"nos3/internal/domain/repository/cli_executer"
 )
 
 type ExtensionProvider struct {

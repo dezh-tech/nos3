@@ -2,8 +2,9 @@ package exif
 
 import (
 	"context"
-	"nos3/internal/domain/repository/exif"
 	"time"
+
+	"nos3/internal/domain/repository/exif"
 
 	grpcRepository "nos3/internal/domain/repository/grpcclient"
 	"nos3/pkg/logger"

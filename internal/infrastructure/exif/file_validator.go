@@ -1,9 +1,10 @@
 package exif
 
 import (
-	"nos3/internal/domain/repository/exif"
 	"path/filepath"
 	"strings"
+
+	"nos3/internal/domain/repository/exif"
 )
 
 type FileValidator struct {

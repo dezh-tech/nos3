@@ -2,8 +2,9 @@ package exif
 
 import (
 	"context"
-	"nos3/internal/domain/repository/exif"
 	"time"
+
+	"nos3/internal/domain/repository/exif"
 
 	"github.com/barasher/go-exiftool"
 
@@ -22,7 +23,8 @@ type Processor struct {
 // Returns an error if ExifTool initialization fails.
 func NewProcessor(exiftoolCmd string,
 	timeout time.Duration,
-	grpcClient grpcRepository.IClient) (exif.ExifProcessor, error) {
+	grpcClient grpcRepository.IClient,
+) (exif.ExifProcessor, error) {
 	logger.Info("initializing exiftool for EXIF processing")
 
 	var et *exiftool.Exiftool

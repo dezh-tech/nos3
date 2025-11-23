@@ -3,6 +3,7 @@ package clamav
 import (
 	"context"
 	"io"
+
 	"nos3/internal/domain/entity"
 )
 

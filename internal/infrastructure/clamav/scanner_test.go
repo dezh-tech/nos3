@@ -169,6 +169,7 @@ func waitForClamAVReady(t *testing.T, address string) {
 
 	t.Fatal("ClamAV daemon did not become ready within timeout period")
 }
+
 func TestScanStream_CleanFile(t *testing.T) {
 	// t.Parallel()
 
@@ -221,6 +222,7 @@ func TestScanStream_InfectedFile(t *testing.T) {
 	assert.NotEmpty(t, result.Threats)
 	assert.Contains(t, strings.ToUpper(result.Threats[0]), "EICAR")
 }
+
 func TestScanStream_EmptyFile(t *testing.T) {
 	// t.Parallel()
 
