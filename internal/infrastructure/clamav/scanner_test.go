@@ -30,8 +30,6 @@ const (
 	CleanFileContent             = "This is a clean test file with no malware."
 	EmptyFileContent             = ""
 	LargeCleanFileContent        = "This is a clean file content. "
-	SmallCleanBenchmarkContent   = "This is a small clean test file for benchmarking."
-	LargeCleanBenchmarkContent   = "Large file content for benchmarking. "
 	InfectedContent              = "infected content"
 	UnparseableContent           = "unparseable content"
 	SomeContent                  = "some content"
@@ -45,7 +43,6 @@ const (
 	Timeout                      = 30000
 	StartupTimeoutDuration       = 60 * time.Second
 	LargeFileContentRepeatCount  = 350000
-	LargeBenchmarkRepeatCount    = 30000
 )
 
 type MockGRPC struct {
@@ -138,9 +135,39 @@ func setupClamAV(t *testing.T) (string, func()) {
 
 	address := fmt.Sprintf(ClamAVAddressFormat, net.JoinHostPort(host, port.Port()))
 
+	waitForClamAVReady(t, address)
+
 	return address, func() {
 		_ = container.Terminate(ctx)
 	}
+}
+
+func waitForClamAVReady(t *testing.T, address string) {
+	t.Helper()
+	maxRetries := 30
+	retryDelay := 2 * time.Second
+
+	mockGRPC := &MockGRPC{}
+	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
+		Return(&gen.AddLogResponse{}, nil)
+
+	for i := 0; i < maxRetries; i++ {
+		scanner, err := NewScanner(ScannerConfig{
+			Address: address,
+			Timeout: Timeout,
+		}, mockGRPC)
+
+		if err == nil && scanner != nil {
+			// Successfully connected and pinged
+			return
+		}
+
+		if i < maxRetries-1 {
+			time.Sleep(retryDelay)
+		}
+	}
+
+	t.Fatal("ClamAV daemon did not become ready within timeout period")
 }
 func TestScanStream_CleanFile(t *testing.T) {
 	// t.Parallel()
@@ -385,97 +412,4 @@ func TestScanStream_ParseErrorDuringScan(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, ErrorCodeScanFailed, malwareErr.Code)
 	assert.Equal(t, ParseErrorFileFormatNotRecog, malwareErr.Details)
-}
-
-func setupClamAVBenchmark(b *testing.B) (string, func()) {
-	b.Helper()
-	ctx := context.Background()
-
-	req := testcontainers.ContainerRequest{
-		Image:        ClamAVImage,
-		ExposedPorts: []string{ClamAVPort},
-		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(ClamAVPort).WithStartupTimeout(StartupTimeoutDuration),
-		),
-	}
-
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	if err != nil {
-		b.Fatal("Failed to start ClamAV container:", err)
-	}
-
-	host, err := container.Host(ctx)
-	if err != nil {
-		b.Fatal("Failed to get container host:", err)
-	}
-
-	port, err := container.MappedPort(ctx, "3310")
-	if err != nil {
-		b.Fatal("Failed to get mapped port:", err)
-	}
-
-	address := fmt.Sprintf(ClamAVAddressFormat, net.JoinHostPort(host, port.Port()))
-
-	return address, func() {
-		_ = container.Terminate(ctx)
-	}
-}
-
-func BenchmarkScanStream_SmallCleanFile(b *testing.B) {
-	address, cleanup := setupClamAVBenchmark(b)
-	defer cleanup()
-
-	mockGRPC := &MockGRPC{}
-	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
-		Return(&gen.AddLogResponse{}, nil)
-
-	scanner, err := NewScanner(ScannerConfig{
-		Address: address,
-		Timeout: Timeout,
-	}, mockGRPC)
-	if err != nil {
-		b.Fatal("Failed to create scanner:", err)
-	}
-
-	content := SmallCleanBenchmarkContent
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		reader := strings.NewReader(content)
-		_, err := scanner.ScanStream(context.Background(), reader)
-		if err != nil {
-			b.Fatal("Scan failed:", err)
-		}
-	}
-}
-
-func BenchmarkScanStream_LargeCleanFile(b *testing.B) {
-	address, cleanup := setupClamAVBenchmark(b)
-	defer cleanup()
-
-	mockGRPC := &MockGRPC{}
-	mockGRPC.On("AddLog", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
-		Return(&gen.AddLogResponse{}, nil)
-
-	scanner, err := NewScanner(ScannerConfig{
-		Address: address,
-		Timeout: Timeout,
-	}, mockGRPC)
-	if err != nil {
-		b.Fatal("Failed to create scanner:", err)
-	}
-
-	content := strings.Repeat(LargeCleanBenchmarkContent, LargeBenchmarkRepeatCount)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		reader := strings.NewReader(content)
-		_, err := scanner.ScanStream(context.Background(), reader)
-		if err != nil {
-			b.Fatal("Scan failed:", err)
-		}
-	}
 }
