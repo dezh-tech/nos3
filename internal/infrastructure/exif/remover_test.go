@@ -19,7 +19,7 @@ func TestNewRemover(t *testing.T) {
 	t.Parallel()
 
 	mockValidator := &MockFileValidator{}
-	mockProcessor := &MockExifProcessor{}
+	mockProcessor := &MockProcessor{}
 	mockGRPC := &MockGRPC{}
 
 	remover := NewRemover(mockValidator, mockProcessor, RemoverTimeout, mockGRPC)
@@ -35,7 +35,7 @@ func TestRemoveExifFromFile_Success(t *testing.T) {
 	t.Parallel()
 
 	mockValidator := &MockFileValidator{}
-	mockProcessor := &MockExifProcessor{}
+	mockProcessor := &MockProcessor{}
 	mockGRPC := &MockGRPC{}
 
 	mockValidator.On("ValidateFileType", TestFilePath).Return(nil)
@@ -54,10 +54,10 @@ func TestRemoveExifFromFile_UnsupportedFileType(t *testing.T) {
 	t.Parallel()
 
 	mockValidator := &MockFileValidator{}
-	mockProcessor := &MockExifProcessor{}
+	mockProcessor := &MockProcessor{}
 	mockGRPC := &MockGRPC{}
 
-	unsupportedErr := &ExifError{
+	unsupportedErr := &Error{
 		Code:    ErrorCodeUnsupportedFileType,
 		Message: "file type does not support EXIF data",
 		Details: ".txt not supported",
@@ -78,10 +78,10 @@ func TestRemoveExifFromFile_ValidationError(t *testing.T) {
 	t.Parallel()
 
 	mockValidator := &MockFileValidator{}
-	mockProcessor := &MockExifProcessor{}
+	mockProcessor := &MockProcessor{}
 	mockGRPC := &MockGRPC{}
 
-	validationErr := &ExifError{
+	validationErr := &Error{
 		Code:    ErrorCodeExifToolNotFound,
 		Message: "failed to get supported extensions",
 		Details: "exiftool not found",
@@ -103,10 +103,10 @@ func TestRemoveExifFromFile_ProcessorError(t *testing.T) {
 	t.Parallel()
 
 	mockValidator := &MockFileValidator{}
-	mockProcessor := &MockExifProcessor{}
+	mockProcessor := &MockProcessor{}
 	mockGRPC := &MockGRPC{}
 
-	processorErr := &ExifError{
+	processorErr := &Error{
 		Code:    ErrorCodeExifRemovalFailed,
 		Message: "failed to remove EXIF data",
 		Details: "write error",
@@ -129,12 +129,12 @@ func TestRemoveExifFromFile_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
 	mockValidator := &MockFileValidator{}
-	mockProcessor := &MockExifProcessor{}
+	mockProcessor := &MockProcessor{}
 	mockGRPC := &MockGRPC{}
 
 	mockValidator.On("ValidateFileType", TestFilePath).Return(nil)
 	mockProcessor.On("RemoveExifData", mock.Anything, TestFilePath).
-		Return(&ExifError{
+		Return(&Error{
 			Code:    ErrorCodeTimeout,
 			Message: "context cancelled",
 			Details: "operation cancelled",
@@ -172,14 +172,14 @@ func TestRemoveExifFromFile_MultipleFiles(t *testing.T) {
 		{
 			name:        "unsupported file",
 			filePath:    "/docs/readme.txt",
-			validateErr: &ExifError{Code: ErrorCodeUnsupportedFileType},
+			validateErr: &Error{Code: ErrorCodeUnsupportedFileType},
 			processErr:  nil,
 			expectError: false,
 		},
 		{
 			name:         "validation fails",
 			filePath:     "/images/photo2.jpg",
-			validateErr:  &ExifError{Code: ErrorCodeExifToolNotFound},
+			validateErr:  &Error{Code: ErrorCodeExifToolNotFound},
 			processErr:   nil,
 			expectError:  true,
 			expectedCode: ErrorCodeExifToolNotFound,
@@ -188,7 +188,7 @@ func TestRemoveExifFromFile_MultipleFiles(t *testing.T) {
 			name:         "processing fails",
 			filePath:     "/images/photo3.jpg",
 			validateErr:  nil,
-			processErr:   &ExifError{Code: ErrorCodeExifRemovalFailed},
+			processErr:   &Error{Code: ErrorCodeExifRemovalFailed},
 			expectError:  true,
 			expectedCode: ErrorCodeExifRemovalFailed,
 		},
@@ -199,15 +199,13 @@ func TestRemoveExifFromFile_MultipleFiles(t *testing.T) {
 			t.Parallel()
 
 			mockValidator := &MockFileValidator{}
-			mockProcessor := &MockExifProcessor{}
+			mockProcessor := &MockProcessor{}
 			mockGRPC := &MockGRPC{}
 
 			mockValidator.On("ValidateFileType", tt.filePath).Return(tt.validateErr)
 
-			if tt.validateErr == nil || tt.validateErr.(*ExifError).Code != ErrorCodeUnsupportedFileType {
-				if tt.validateErr == nil {
-					mockProcessor.On("RemoveExifData", mock.Anything, tt.filePath).Return(tt.processErr)
-				}
+			if tt.validateErr == nil {
+				mockProcessor.On("RemoveExifData", mock.Anything, tt.filePath).Return(tt.processErr)
 			}
 
 			remover := NewRemover(mockValidator, mockProcessor, RemoverTimeout, mockGRPC)
@@ -216,7 +214,7 @@ func TestRemoveExifFromFile_MultipleFiles(t *testing.T) {
 
 			if tt.expectError {
 				require.Error(t, err)
-				var exifErr *ExifError
+				var exifErr *Error
 				require.True(t, errors.As(err, &exifErr))
 				assert.Equal(t, tt.expectedCode, exifErr.Code)
 			} else {
@@ -254,7 +252,7 @@ func TestClose(t *testing.T) {
 			t.Parallel()
 
 			mockValidator := &MockFileValidator{}
-			mockProcessor := &MockExifProcessor{}
+			mockProcessor := &MockProcessor{}
 			mockGRPC := &MockGRPC{}
 
 			mockProcessor.On("Close").Return(tt.closeErr)

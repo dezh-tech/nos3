@@ -2,7 +2,6 @@ package exif
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,6 +30,7 @@ func setupTestDir(t *testing.T) string {
 	t.Cleanup(func() {
 		_ = os.RemoveAll(dir)
 	})
+
 	return dir
 }
 
@@ -60,13 +60,13 @@ func createTestImageWithExif(t *testing.T, filePath string) {
 		0x00, 0x00, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F, 0x00,
 		0x37, 0xFF, 0xD9,
 	}
-	err := os.WriteFile(filePath, jpegData, 0o644)
+	err := os.WriteFile(filePath, jpegData, 0o600)
 	require.NoError(t, err)
 	cmd := exec.Command("exiftool",
 		"-overwrite_original",
-		fmt.Sprintf("-Comment=%s", TestExifComment),
-		fmt.Sprintf("-Artist=%s", TestExifArtist),
-		fmt.Sprintf("-Copyright=%s", TestExifCopyright),
+		"-Comment="+TestExifComment,
+		"-Artist="+TestExifArtist,
+		"-Copyright="+TestExifCopyright,
 		"-Make=TestCamera",
 		"-Model=TestModel",
 		"-Software=TestSoftware",
@@ -88,12 +88,12 @@ func createTestPNGWithExif(t *testing.T, filePath string) {
 		0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
 		0xAE, 0x42, 0x60, 0x82,
 	}
-	err := os.WriteFile(filePath, pngData, 0o644)
+	err := os.WriteFile(filePath, pngData, 0o600)
 	require.NoError(t, err)
 	cmd := exec.Command("exiftool",
 		"-overwrite_original",
-		fmt.Sprintf("-Comment=%s", TestExifComment),
-		fmt.Sprintf("-Artist=%s", TestExifArtist),
+		"-Comment="+TestExifComment,
+		"-Artist="+TestExifArtist,
 		filePath,
 	)
 	output, err := cmd.CombinedOutput()
@@ -108,6 +108,7 @@ func hasExifData(t *testing.T, filePath string) bool {
 		return false
 	}
 	outputStr := string(output)
+
 	return strings.Contains(outputStr, TestExifComment) ||
 		strings.Contains(outputStr, TestExifArtist) ||
 		strings.Contains(outputStr, TestExifCopyright) ||
@@ -173,7 +174,7 @@ func TestProcessor_RemoveExifData_NonExistentFile(t *testing.T) {
 
 	err = processor.RemoveExifData(context.Background(), nonExistentFile)
 	if err != nil {
-		var exifErr *ExifError
+		var exifErr *Error
 		if assert.ErrorAs(t, err, &exifErr) {
 			assert.Equal(t, ErrorCodeExifRemovalFailed, exifErr.Code)
 		}
@@ -198,7 +199,7 @@ func TestProcessor_RemoveExifData_ContextCancellation(t *testing.T) {
 	err = processor.RemoveExifData(ctx, testFile)
 	assert.Error(t, err)
 
-	var exifErr *ExifError
+	var exifErr *Error
 	if assert.ErrorAs(t, err, &exifErr) {
 		assert.Equal(t, ErrorCodeTimeout, exifErr.Code)
 		assert.True(t, exifErr.IsTimeout())
@@ -224,7 +225,7 @@ func TestProcessor_NewProcessor_InvalidExifToolPath(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, processor)
 
-	var exifErr *ExifError
+	var exifErr *Error
 	if assert.ErrorAs(t, err, &exifErr) {
 		assert.Equal(t, ErrorCodeExifToolNotFound, exifErr.Code)
 	}

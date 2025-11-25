@@ -1,4 +1,4 @@
-package cli_executer
+package cliexecuter
 
 type CommandExecutor interface {
 	Execute(cmd string, args ...string) ([]byte, error)

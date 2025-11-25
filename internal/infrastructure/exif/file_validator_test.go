@@ -117,7 +117,7 @@ func TestValidateFileType_UnsupportedFileTypes(t *testing.T) {
 
 			require.Error(t, err)
 
-			var exifErr *ExifError
+			var exifErr *Error
 			require.True(t, errors.As(err, &exifErr))
 			assert.Equal(t, ErrorCodeUnsupportedFileType, exifErr.Code)
 			assert.Contains(t, exifErr.Message, "file type does not support EXIF data")
@@ -141,7 +141,7 @@ func TestValidateFileType_ExtensionProviderError(t *testing.T) {
 
 	require.Error(t, err)
 
-	var exifErr *ExifError
+	var exifErr *Error
 	require.True(t, errors.As(err, &exifErr))
 	assert.Equal(t, ErrorCodeExifToolNotFound, exifErr.Code)
 	assert.Equal(t, "failed to get supported extensions", exifErr.Message)
@@ -163,7 +163,7 @@ func TestValidateFileType_EmptySupportedExtensions(t *testing.T) {
 
 	require.Error(t, err)
 
-	var exifErr *ExifError
+	var exifErr *Error
 	require.True(t, errors.As(err, &exifErr))
 	assert.Equal(t, ErrorCodeUnsupportedFileType, exifErr.Code)
 
@@ -236,7 +236,7 @@ func TestValidateFileType_EdgeCases(t *testing.T) {
 			if tt.expectedError {
 				require.Error(t, err)
 				if tt.expectedExt != "" {
-					var exifErr *ExifError
+					var exifErr *Error
 					require.True(t, errors.As(err, &exifErr))
 					assert.Equal(t, ErrorCodeUnsupportedFileType, exifErr.Code)
 				}

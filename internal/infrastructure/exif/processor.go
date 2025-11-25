@@ -24,7 +24,7 @@ type Processor struct {
 func NewProcessor(exiftoolCmd string,
 	timeout time.Duration,
 	grpcClient grpcRepository.IClient,
-) (exif.ExifProcessor, error) {
+) (exif.Processor, error) {
 	logger.Info("initializing exiftool for EXIF processing")
 
 	var et *exiftool.Exiftool
@@ -39,7 +39,7 @@ func NewProcessor(exiftoolCmd string,
 	if err != nil {
 		logError(context.Background(), grpcClient, "failed to initialize exiftool", err.Error())
 
-		return nil, &ExifError{
+		return nil, &Error{
 			Code:    ErrorCodeExifToolNotFound,
 			Message: "failed to initialize exiftool",
 			Details: err.Error(),
@@ -71,11 +71,12 @@ func (e *Processor) RemoveExifData(ctx context.Context, filePath string) error {
 		e.exiftool.WriteMetadata([]exiftool.FileMetadata{fileMetadata})
 
 		if fileMetadata.Err != nil {
-			done <- &ExifError{
+			done <- &Error{
 				Code:    ErrorCodeExifRemovalFailed,
 				Message: "failed to remove EXIF data",
 				Details: fileMetadata.Err.Error(),
 			}
+
 			return
 		}
 
@@ -87,9 +88,10 @@ func (e *Processor) RemoveExifData(ctx context.Context, filePath string) error {
 		if err != nil {
 			logError(ctx, e.grpcClient, "EXIF removal failed", err.Error())
 		}
+
 		return err
 	case <-ctx.Done():
-		return &ExifError{
+		return &Error{
 			Code:    ErrorCodeTimeout,
 			Message: "EXIF removal timeout",
 			Details: "operation took too long",
@@ -103,10 +105,11 @@ func (e *Processor) Close() error {
 	if e.exiftool != nil {
 		return e.exiftool.Close()
 	}
+
 	return nil
 }
 
-// logError is a standalone function for logging errors to both local logger and gRPC client
+// logError is a standalone function for logging errors to both local logger and gRPC client.
 func logError(ctx context.Context, grpcClient grpcRepository.IClient, message, details string) {
 	logger.Error(message, "details", details)
 	if _, logErr := grpcClient.AddLog(ctx, message, details); logErr != nil {

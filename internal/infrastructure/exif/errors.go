@@ -14,13 +14,13 @@ const (
 	ErrorCodeUnsupportedFileType
 )
 
-type ExifError struct {
+type Error struct {
 	Code    ErrorCode
 	Message string
 	Details string
 }
 
-func (e *ExifError) Error() string {
+func (e *Error) Error() string {
 	if e.Details != "" {
 		return fmt.Sprintf("%s: %s", e.Message, e.Details)
 	}
@@ -28,14 +28,14 @@ func (e *ExifError) Error() string {
 	return e.Message
 }
 
-func (e *ExifError) IsTimeout() bool {
+func (e *Error) IsTimeout() bool {
 	return e.Code == ErrorCodeTimeout
 }
 
-func (e *ExifError) IsUnsupportedFileType() bool {
+func (e *Error) IsUnsupportedFileType() bool {
 	return e.Code == ErrorCodeUnsupportedFileType
 }
 
-func (e *ExifError) IsTempFileError() bool {
+func (e *Error) IsTempFileError() bool {
 	return e.Code == ErrorCodeTempFileCreationFailed
 }

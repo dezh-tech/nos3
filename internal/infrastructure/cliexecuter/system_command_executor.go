@@ -1,4 +1,4 @@
-package cli_executer
+package cliexecuter
 
 import "os/exec"
 

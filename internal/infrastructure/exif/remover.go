@@ -2,6 +2,7 @@ package exif
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"nos3/internal/domain/repository/exif"
@@ -12,7 +13,7 @@ import (
 
 type Remover struct {
 	fileValidator exif.FileValidator
-	exifProcessor exif.ExifProcessor
+	exifProcessor exif.Processor
 	timeout       time.Duration
 	grpcClient    grpcRepository.IClient
 }
@@ -22,7 +23,7 @@ type Remover struct {
 // This is the main entry point for EXIF removal operations.
 func NewRemover(
 	fileValidator exif.FileValidator,
-	exifProcessor exif.ExifProcessor,
+	exifProcessor exif.Processor,
 	timeout time.Duration,
 	grpcClient grpcRepository.IClient,
 ) *Remover {
@@ -45,9 +46,11 @@ func (r *Remover) RemoveExifFromFile(ctx context.Context, filePath string) error
 	defer cancel()
 
 	if err := r.fileValidator.ValidateFileType(filePath); err != nil {
-		if exifErr, ok := err.(*ExifError); ok && exifErr.Code == ErrorCodeUnsupportedFileType {
+		var exifErr *Error
+		if errors.As(err, &exifErr) && exifErr.Code == ErrorCodeUnsupportedFileType {
 			return nil
 		}
+
 		return err
 	}
 

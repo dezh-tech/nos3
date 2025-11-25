@@ -4,21 +4,21 @@ import (
 	"strings"
 	"sync"
 
-	"nos3/internal/domain/repository/cli_executer"
+	"nos3/internal/domain/repository/cliexecuter"
 )
 
 type ExtensionProvider struct {
 	exiftoolCmd         string
 	listFlag            string
-	executor            cli_executer.CommandExecutor
+	executor            cliexecuter.CommandExecutor
 	supportedExtensions map[string]bool
 	initErr             error
 	once                sync.Once
 }
 
 // NewExtensionProvider creates a new ExtensionProvider instance that can fetch
-// and cache supported file extensions from ExifTool
-func NewExtensionProvider(cfg ExtensionProviderConfig, executor cli_executer.CommandExecutor) *ExtensionProvider {
+// and cache supported file extensions from ExifTool.
+func NewExtensionProvider(cfg ExtensionProviderConfig, executor cliexecuter.CommandExecutor) *ExtensionProvider {
 	return &ExtensionProvider{
 		exiftoolCmd: cfg.ExifToolCmd,
 		listFlag:    cfg.ExifToolListFlag,
@@ -42,6 +42,7 @@ func (e *ExtensionProvider) GetSupportedExtensions() (map[string]bool, error) {
 	for k, v := range e.supportedExtensions {
 		result[k] = v
 	}
+
 	return result, nil
 }
 
