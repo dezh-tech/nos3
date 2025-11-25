@@ -105,4 +105,9 @@ logger:
 
   # targets is targets for logs to be written to.
   targets: [file, console]
-  
+
+clamav_scanner:
+
+  address: ""
+
+  timeout:
